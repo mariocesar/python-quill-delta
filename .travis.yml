@@ -8,6 +8,7 @@ cache:
     directories:
         - $TRAVIS_BUILD_DIR/.eggs
         - $TRAVIS_BUILD_DIR/.cache
+        - $HOME/virtualenv
 
 script:
     - pip install coveralls
