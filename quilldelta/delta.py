@@ -45,9 +45,6 @@ class Delta:
     def __eq__(self, other):
         return self.ops == other.ops
 
-    def __add__(self, other):
-        return other.compose(self)
-
     def _asdict(self):
         return [op._asdict() for op in self.ops]
 
@@ -218,4 +215,10 @@ class Delta:
         return Delta(ops)
 
     def concat(self, other):
-        pass
+        delta = Delta(self.ops.copy())
+
+        if len(other.ops) > 0:
+            delta.push(other.ops[0])
+            delta.ops = delta.ops + other.ops[1:]
+
+        return delta
