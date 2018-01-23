@@ -1,5 +1,7 @@
 # python-quill-delta
 
+[![Build Status](https://travis-ci.org/mariocesar/python-quill-delta.svg?branch=master)](https://travis-ci.org/mariocesar/python-quill-delta)
+
 Implements all quill-delta operations in Python. 
 
 Also implements:
@@ -12,7 +14,7 @@ Also implements:
 
 
 ## Test Progress
-    
+
     collected 37 items                                                                                         
     
     tests/test_builder.py::TestConstructor::test_empty PASSED                                            [  2%]

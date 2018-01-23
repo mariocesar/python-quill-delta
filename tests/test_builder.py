@@ -1,6 +1,6 @@
 import pytest
 
-from quilldelta.quilldelta.delta import Delta, Insert, Retain, Delete
+from quilldelta import Delta, Insert, Retain, Delete
 
 
 class TestConstructor:

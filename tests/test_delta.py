@@ -1,4 +1,4 @@
-from quilldelta.quilldelta.delta import Delta
+from quilldelta import Delta
 
 
 class TestCompose:
