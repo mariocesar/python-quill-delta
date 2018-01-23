@@ -10,7 +10,7 @@ setup(
     packages=find_packages('', exclude='tests/*'),
     python_requires='>=3.6',
     setup_requires=['pytest-runner'],
-    tests_require=['pytest'],
+    tests_require=['pytest', 'pytest-cov'],
     classifiers=[
         'Intended Audience :: Developers',
         'Programming Language :: Python :: 3.6',
