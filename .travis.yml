@@ -5,7 +5,9 @@ python:
 
 cache:
     directories:
-        - $HOME/.cache
+        - $HOME/.cache/pip
+        - $TRAVIS_BUILD_DIR/.eggs
+        - $TRAVIS_BUILD_DIR/.cache
 
 script:
     - pip install coveralls
