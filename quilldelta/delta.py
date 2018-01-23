@@ -28,7 +28,7 @@ class Delta:
             ops = ops.ops
         elif ops is not None:
             if not isinstance(ops, (tuple, list)):
-                assert 'ops' in ops, 'Unknown form of ops {}'.format(ops)
+                assert 'Unknown form of ops {}'.format(ops)
 
         if not ops:
             ops = []
