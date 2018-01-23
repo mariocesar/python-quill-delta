@@ -40,10 +40,13 @@ class Delta:
                 self.ops.append(op)
 
     def __repr__(self):
-        return f'<Delta changes={len(self.ops)} at {id(self)}>'
+        return f'<Delta length={self.length()} at {id(self)}>'
 
     def __eq__(self, other):
         return self.ops == other.ops
+
+    def __add__(self, other):
+        return other.compose(self)
 
     def _asdict(self):
         return [op._asdict() for op in self.ops]
@@ -166,7 +169,6 @@ class Delta:
         self_iter = Iterator(self.ops)
         other_iter = Iterator(other.ops)
 
-        print()
         while self_iter.has_next() or other_iter.has_next():
 
             if other_iter.peek_type() == Insert:
@@ -217,6 +219,3 @@ class Delta:
 
     def concat(self, other):
         pass
-
-    def __add__(self, other):
-        return self.compose(other)
