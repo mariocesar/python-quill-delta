@@ -4,8 +4,8 @@ python:
     - "3.6"
 
 cache:
+    pip:
     directories:
-        - $HOME/.cache/pip
         - $TRAVIS_BUILD_DIR/.eggs
         - $TRAVIS_BUILD_DIR/.cache
 
