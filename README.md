@@ -2,6 +2,8 @@
 
 [![Build Status](https://travis-ci.org/mariocesar/python-quill-delta.svg?branch=master)](https://travis-ci.org/mariocesar/python-quill-delta)
 
+[![Coverage Status](https://coveralls.io/repos/github/mariocesar/python-quill-delta/badge.svg?branch=master)](https://coveralls.io/github/mariocesar/python-quill-delta?branch=master)
+
 Implements all quill-delta operations in Python. 
 
 Also implements:
