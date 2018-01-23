@@ -14,6 +14,12 @@ Also implements:
 
 !!NOTE This is early work, is not 100% usable
 
+## Quickstart
+
+It can be installed via pip.
+
+    pip install quilldelta
+
 
 ## Test Progress
 

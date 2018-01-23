@@ -222,3 +222,15 @@ class Delta:
             delta.ops = delta.ops + other.ops[1:]
 
         return delta
+
+    def diff(self, other, index):
+        raise NotImplementedError
+
+    def each_line(self, func, newline):
+        raise NotImplementedError
+
+    def transform(self, other, priority):
+        raise NotImplementedError
+
+    def transform_position(self, index, priority):
+        raise NotImplementedError
