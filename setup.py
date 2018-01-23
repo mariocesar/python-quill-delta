@@ -12,7 +12,7 @@ setup(
     version='0.1.1',
     url='https://github.com/mariocesar/python-quill-delta',
     description='',
-    packages=find_packages(exclude='tests'),
+    packages=find_packages(exclude='tests/*'),
     python_requires='>=3.6',
     setup_requires=['pytest-runner'],
     tests_require=['pytest', 'pytest-cov'],
