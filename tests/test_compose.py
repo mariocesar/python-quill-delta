@@ -1,6 +1,5 @@
 from quilldelta import Delta
 
-
 class TestCompose:
     def test_insert_insert(self):
         a = Delta().insert('A')
@@ -64,3 +63,10 @@ class TestCompose:
         expected = Delta().delete(1)
         delta = a.compose(b)
         assert delta == expected, [delta.ops, expected.ops]
+
+    def test_insert_in_middle_of_text(self):
+        a = Delta().insert('Hello')
+        b = Delta().retain(3).insert('X')
+        expected = Delta().insert('HelXlo')
+
+        assert a.compose(b).ops == expected.ops

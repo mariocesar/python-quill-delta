@@ -40,7 +40,7 @@ class Delta:
                 self.ops.append(op)
 
     def __repr__(self):
-        return f'<Delta length={self.length()} at {id(self)}>'
+        return f'<Delta {self.ops}>'
 
     def __eq__(self, other):
         return self.ops == other.ops
@@ -73,13 +73,10 @@ class Delta:
                     self.ops.insert(0, new_op)
                     return self
 
-            if isinstance(new_op, (Insert, Retain)) and isinstance(last_op, (Insert, Retain)):
+            if all(map(lambda op: isinstance(op, (Insert, Retain)), [new_op, last_op])):
                 if isinstance(new_op, type(last_op)):
                     if new_op.attributes == last_op.attributes:
-                        if isinstance(new_op.value, str) and isinstance(last_op.value, str):
-                            self.ops[index - 1] = last_op + new_op
-                            return self
-                        elif isinstance(new_op.value, int) and isinstance(last_op.value, int):
+                        if type(new_op.value) == type(last_op.value):
                             self.ops[index - 1] = last_op + new_op
                             return self
 
@@ -144,7 +141,7 @@ class Delta:
 
         return passed, failed
 
-    def reduce(self, func, initial):
+    def reduce(self, func, initial=0):
         return reduce(func, self.ops, initial=initial)
 
     def change_length(self):
@@ -156,18 +153,17 @@ class Delta:
             else:
                 return length
 
-        return self.reduce(reducer, initial=0)
+        return self.reduce(reducer, 0)
 
     def length(self):
-        return self.reduce(self.map(lambda op: op.length), initial=0)
+        return reduce(lambda length, op: op.length + length, self.ops, 0)
 
     def compose(self, other: TypeVar('Delta')):
-        delta = Delta()
         self_iter = Iterator(self.ops)
         other_iter = Iterator(other.ops)
+        delta = Delta()
 
         while self_iter.has_next() or other_iter.has_next():
-
             if other_iter.peek_type() == Insert:
                 delta.push(other_iter.next())
             elif self_iter.peek_type() == Delete:
@@ -226,12 +222,41 @@ class Delta:
     def diff(self, other, index):
         raise NotImplementedError
 
-    def each_line(self, func, newline):
-        raise NotImplementedError
+    def each_line(self, func, newline='\n'):
+        cursor = Iterator(self.ops)
+        line = Delta()
+        i = 0
+
+        while cursor.has_next():
+            if cursor.peek_type() != Insert:
+                return
+
+            self_op = cursor.peek()
+            start = self_op.length - cursor.peek_length()
+
+            if isinstance(self_op, Insert) and isinstance(self_op.value, str):
+                try:
+                    index = self_op.value.index(newline, start) - start
+                except ValueError:
+                    index = -1
+            else:
+                index = -1
+
+            if index < 0:
+                line.push(cursor.next())
+            elif index > 0:
+                line.push(cursor.next(index))
+            else:
+                if not func(line, cursor.next(1).attributes, i):
+                    return
+                i += 1
+                line = Delta()
+
+        if line.length() > 0:
+            func(line, {}, i)
 
     def transform(self, other, priority):
         raise NotImplementedError
 
     def transform_position(self, index, priority):
         raise NotImplementedError
-
