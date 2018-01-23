@@ -3,6 +3,10 @@ language: python
 python:
     - "3.6"
 
+cache:
+    directories:
+        - $HOME/.cache
+
 script:
     - pip install coveralls
     - python setup.py test
