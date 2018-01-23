@@ -2,8 +2,8 @@ from functools import reduce
 from math import inf
 from typing import List, TypeVar, Union, Dict, Any
 
-from .operations import OperationType, Insert, Retain, Delete
 from .iterator import Iterator
+from .operations import OperationType, Insert, Retain, Delete
 
 
 def op_from_dict(data: dict):
@@ -234,3 +234,4 @@ class Delta:
 
     def transform_position(self, index, priority):
         raise NotImplementedError
+
