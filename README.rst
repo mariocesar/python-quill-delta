@@ -17,6 +17,6 @@ Implements all quill-delta operations in Python.
 Quickstart
 ==========
 
-It can be installed via pip.
+It can be installed via pip.::
 
-    pip install quilldelta
+   pip install quilldelta
