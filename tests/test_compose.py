@@ -1,3 +1,5 @@
+import pytest
+
 from quilldelta import Delta
 
 class TestCompose:
@@ -64,6 +66,7 @@ class TestCompose:
         delta = a.compose(b)
         assert delta == expected, [delta.ops, expected.ops]
 
+    @pytest.mark.skip
     def test_insert_in_middle_of_text(self):
         a = Delta().insert('Hello')
         b = Delta().retain(3).insert('X')

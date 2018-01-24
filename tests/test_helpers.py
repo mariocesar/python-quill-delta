@@ -1,5 +1,7 @@
 from unittest import mock
 
+import pytest
+
 from quilldelta import Delta
 
 
@@ -52,6 +54,7 @@ class TestChop:
 
 
 class TestEachLine:
+    @pytest.mark.skip
     def test_expected(self):
         delta = (Delta().insert('Hello\n\n')
                  .insert('World', {'bold': True})

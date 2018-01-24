@@ -5,13 +5,19 @@ from setuptools import setup, find_packages
 if sys.version_info < (3, 6):
     sys.exit('Python 3.6 is the minimum required version')
 
+description, long_description = (
+    open('README.rst', 'rt')
+        .read()
+        .split('\n\n', 1))
+
 setup(
     name='quilldelta',
     author='Mario César Señoranis Ayala',
     author_email='mariocesar.c50@gmail.com',
     version='0.1.1',
     url='https://github.com/mariocesar/python-quill-delta',
-    description='',
+    description=description,
+    long_description=long_description,
     packages=find_packages(exclude='tests/*'),
     python_requires='>=3.6',
     setup_requires=['pytest-runner'],

@@ -4,13 +4,17 @@ python:
     - "3.6"
 
 cache:
-    pip:
-    directories:
-        - $TRAVIS_BUILD_DIR/.eggs
-        - $TRAVIS_BUILD_DIR/.cache
-        - $HOME/virtualenv
+  pip:
+  directories:
+    - $TRAVIS_BUILD_DIR/.eggs
+    - $TRAVIS_BUILD_DIR/.cache
+    - $HOME/virtualenv
+
+install:
+  - pip install codecov
 
 script:
-    - pip install coveralls
-    - python setup.py test
-    - coveralls
+  - python setup.py --quiet test
+
+after_success:
+  - codecov
