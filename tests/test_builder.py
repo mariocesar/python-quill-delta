@@ -63,6 +63,16 @@ class TestInsert:
         assert len(delta.ops) == 1
         assert delta.ops == [Insert('test', None)]
 
+    def test_insert_lengths(self):
+        delta = Delta().insert('test')
+        assert delta.length() == 4
+
+        delta = Delta().insert(1)
+        assert delta.length() == 1
+
+        delta = Delta().insert({'url': 'https://google.com/'})
+        assert delta.length() == 1
+
     def test_insert_embed(self):
         delta = Delta().insert(1)
 
@@ -140,6 +150,16 @@ class TestDelete:
         delta = Delta().delete(0)
         assert delta.ops == []
 
+    def test_delete_delta_lengths(self):
+        delta = Delta().delete(1)
+        assert delta.length() == 1
+
+        delta = Delta().delete(10)
+        assert delta.length() == 10
+
+        delta = Delta().delete(10).delete(10).delete(10)
+        assert delta.length() == 30
+
     def test_delete_positive(self):
         delta = Delta().delete(1)
         assert len(delta.ops) == 1
@@ -170,6 +190,16 @@ class TestRetain:
         delta = Delta().retain(2)
         assert len(delta.ops) == 1
         assert delta.ops == [Retain(2, None)]
+
+    def test_retain_delta_lengths(self):
+        delta = Delta().retain(1)
+        assert delta.length() == 1
+
+        delta = Delta().retain(10)
+        assert delta.length() == 10
+
+        delta = Delta().retain(10).retain(10).retain(10)
+        assert delta.length() == 30
 
     def test_retain_length_none(self):
         delta = Delta().retain(2, None)
