@@ -1,3 +1,4 @@
+import json
 from functools import reduce
 from math import inf
 from typing import List, TypeVar, Union, Dict, Any
@@ -45,8 +46,14 @@ class Delta:
     def __eq__(self, other):
         return self.ops == other.ops
 
-    def _asdict(self):
-        return [op._asdict() for op in self.ops]
+    def __iter__(self):
+        return iter(self.ops)
+
+    def __str__(self):
+        return json.dumps(self.asdata())
+
+    def asdata(self):
+        return [op.asdata() for op in self.ops]
 
     def push(self, new_op: OperationType):
         if isinstance(new_op, dict):

@@ -1,5 +1,33 @@
+import json
 from collections import namedtuple
-from typing import TypeVar, Union
+from typing import Union
+
+
+def as_json(instance):
+    return json.dumps(instance.asdata())
+
+
+def add_op(instance, other):
+    type_op = type(instance)
+    type_other = type(other)
+
+    assert type(other) == type_op, \
+        f'Operations are not from the same type {type_op} != {type_other}'
+
+    if hasattr(instance, 'attributes'):
+        assert instance.attributes == other.attributes, \
+            'Can not sum insert operations with different attributes'
+
+        return type_op(instance.value + other.value, other.attributes)
+    else:
+        return type_op(instance.value + other.value)
+
+
+def asdata(instance):
+    name = type(instance).__name__.lower()
+    data = instance._asdict()
+    value = data.pop('value')
+    return {name: value, **{k: v for k, v in data.items() if v}}
 
 
 def fromdict(cls, data: dict):
@@ -11,14 +39,14 @@ def fromdict(cls, data: dict):
 
 class Insert(namedtuple('Insert', 'value, attributes')):
     __slots__ = ()
+    __str__ = as_json
+    __add__ = add_op
+    asdata = asdata
 
     @classmethod
     def fromdict(cls, data):
         data.setdefault('attributes', None)
         return fromdict(cls, data)
-
-    def _asdict(self):
-        return {'insert': self.value, 'attributes': self.attributes}
 
     @property
     def length(self):
@@ -26,49 +54,40 @@ class Insert(namedtuple('Insert', 'value, attributes')):
             return len(self.value)
         return 1
 
-    def __add__(self, other: TypeVar('Insert')):
-        assert type(other) == Insert
-        assert self.attributes == other.attributes, 'Can not sum insert operations with different attributes'
-
-        return Insert(self.value + other.value, other.attributes)
-
 
 class Retain(namedtuple('Retain', 'value, attributes')):
     __slots__ = ()
+    __str__ = as_json
+    __add__ = add_op
+    asdata = asdata
 
     @classmethod
     def fromdict(cls, data: dict):
         data.setdefault('attributes', None)
         return fromdict(cls, data)
 
-    def _asdict(self):
-        return {'retain': self.value, 'attributes': self.attributes}
-
     @property
     def length(self):
         return self.value
 
-    def __add__(self, other: TypeVar('Retain')):
-        assert type(other) == Retain
-        assert self.attributes == other.attributes, 'Can not sum retain operations with different attributes'
 
-        return Retain(self.value + other.value, other.attributes)
-
-
-class Delete(namedtuple('Delete', 'length')):
+class Delete(namedtuple('Delete', 'value')):
     __slots__ = ()
+    __str__ = as_json
+    __add__ = add_op
+    asdata = asdata
 
     @classmethod
     def fromdict(cls, data: dict):
         return fromdict(cls, data)
 
-    def _asdict(self):
-        return {'delete': self.length}
+    @property
+    def length(self):
+        return self.value
 
-    def __add__(self, other: TypeVar('Delete')):
-        assert type(other) == Delete
-
-        return Delete(self.length + other.length)
+    @length.setter
+    def length(self, val):
+        self.value = int(val)
 
 
 OperationType = Union[Insert, Retain, Delete, dict]
