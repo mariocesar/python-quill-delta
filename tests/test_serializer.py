@@ -1,6 +1,29 @@
 import unittest
 
+import pytest
+
 from quilldelta import Delta, Retain, Insert, Delete
+from quilldelta.delta import op_from_dict
+
+
+class TestParser(unittest.TestCase):
+    def test_insert_from_dict(self):
+        assert op_from_dict({'insert': 1}) == Insert(1, None)
+        assert op_from_dict({'insert': 'foo'}) == Insert('foo', None)
+        assert op_from_dict({'insert': 'foo', 'attributes': {'bold': True}}) == Insert('foo', {'bold': True})
+
+    def test_retain_from_dict(self):
+        assert op_from_dict({'retain': 1}) == Retain(1, None)
+        assert op_from_dict({'retain': 1, 'attributes': {'bold': True}}) == Insert(1, {'bold': True})
+
+    def test_delete_from_dict(self):
+        assert op_from_dict({'delete': 1}) == Delete(1)
+
+    def test_unknown_operation(self):
+        with pytest.raises(ValueError) as error:
+            assert op_from_dict({'emotion': 1})
+
+        assert error.match('Unknown operation')
 
 
 class TestData(unittest.TestCase):

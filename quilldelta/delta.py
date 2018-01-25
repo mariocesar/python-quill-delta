@@ -129,22 +129,14 @@ class Delta:
 
         return self
 
-    def filter(self, func):
-        return filter(func, self.ops)
-
-    def map(self, func):
-        return map(func, self.ops)
-
-    def for_each(self, func):
-        for op in self.ops:
-            func(op)
-
     def partition(self, func):
         passed, failed = [], []
-        ok = passed.append
-        fail = failed.append
 
-        self.for_each(lambda op: ok(op) if func(op) else fail(op))
+        for op in self:
+            if func(op):
+                passed.append(op)
+            else:
+                failed.append(op)
 
         return passed, failed
 
