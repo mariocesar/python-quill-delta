@@ -1,6 +1,5 @@
 import json
 from collections import namedtuple
-from typing import Union
 
 
 def as_json(instance):
@@ -32,6 +31,7 @@ def asdata(instance):
 
 def fromdict(cls, data: dict):
     name = cls.__name__.lower()
+
     if name in data:
         value = data.pop(name)
         return cls(value, **data)
@@ -88,6 +88,3 @@ class Delete(namedtuple('Delete', 'value')):
     @length.setter
     def length(self, val):
         self.value = int(val)
-
-
-OperationType = Union[Insert, Retain, Delete, dict]

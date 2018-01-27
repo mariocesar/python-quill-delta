@@ -1,53 +1,114 @@
 import json
 from functools import reduce
+from collections.abc import Sequence
 from math import inf
-from typing import List, TypeVar, Union, Dict, Any
+from typing import Any, Union, List, Iterable, TypeVar, Dict
 
 from .iterator import Iterator
-from .operations import OperationType, Insert, Retain, Delete
+from .operations import Insert, Retain, Delete
+from .utils import clean_operation, truncate_repr, chainable, is_insert, is_delete, is_retain, it_insert_text
+
+OperationType = Union[Insert, Retain, Delete, Dict]
 
 
-def op_from_dict(data: dict):
-    if 'insert' in data:
-        return Insert.fromdict(data)
-    elif 'retain' in data:
-        return Retain.fromdict(data)
-    elif 'delete' in data:
-        return Delete.fromdict(data)
+class Operations(Sequence):
+    def __init__(self, items: Union[List, Iterable] = None):
+        if items:
+            assert isinstance(items, (List, Iterable)), f'Wrong type {type(items)} for items'
 
-    raise ValueError('Unknown operation for %s' % data)
+        self._items = []
+        self.last = None
+
+        if not items:
+            items = []
+
+        for item in items:
+            self.append.inner(self, item)
+
+    def __repr__(self):
+        return f'<Operations {truncate_repr(self._items)}>'
+
+    def __len__(self):
+        return len(self._items)
+
+    def __getitem__(self, item):
+        return self._items[item]
+
+    def __setitem__(self, key: int, value: OperationType):
+        value = clean_operation(value)
+        self._items[key] = value
+        self.last = self._items[-1]
+
+    def __eq__(self, other: Union[TypeVar('Operations'), List]):
+        assert isinstance(other, (Operations, list)), f'Wrong type {type(other)}'
+
+        if isinstance(other, Operations):
+            return self._items == other._items
+        elif isinstance(other, list):
+            return self._items == other
+
+    def __add__(self, other: Union[TypeVar('Operations'), List]):
+        assert isinstance(other, (Operations, list)), f'Wrong type {type(other)}'
+
+        if isinstance(other, Operations):
+            return Operations(self._items + other._items)
+        elif isinstance(other, list):
+            return Operations(self._items + other)
+
+    @chainable
+    def append(self, value: OperationType):
+        value = clean_operation(value)
+        self._items.append(value)
+        self.last = value
+
+    @chainable
+    def insert(self, index: int, value: OperationType):
+        value = clean_operation(value)
+        self._items.insert(index, value)
+        self.last = self._items[-1]
+
+    @chainable
+    def filter(self, func):
+        return Operations(filter(func, self))
+
+    @chainable
+    def map(self, func):
+        return Operations(map(func, self))
+
+    @chainable
+    def chop(self):
+        if self.last and is_retain(self.last) and self.last.attributes:
+            self._items.pop()
+
+
+DeltaOperationsType = Union[List, Dict, TypeVar('Delta'), Operations]
 
 
 class Delta:
-    def __init__(self, ops: Union[List[OperationType], Dict, TypeVar('Delta')] = None):
-        self.ops = []
+    def __init__(self, ops: DeltaOperationsType = None):
+        if ops:
+            assert isinstance(ops, (list, dict, Delta, Operations)), \
+                f'Wrong type {type(ops)} expected {DeltaOperationsType}'
 
         if isinstance(ops, dict):
-            assert 'ops' in ops, 'Unknown form of ops {}'.format(ops)
-            ops = ops['ops']
+            assert 'ops' in ops, 'Unknown form, missing "ops" key.'
+            ops = Operations(ops['ops'])
         elif isinstance(ops, Delta):
             ops = ops.ops
-        elif ops is not None:
-            if not isinstance(ops, (tuple, list)):
-                assert 'Unknown form of ops {}'.format(ops)
+        elif isinstance(ops, Operations):
+            ops = ops
+        elif isinstance(ops, list):
+            ops = [clean_operation(op) for op in ops]
+        elif not ops:
+            ops = Operations()
 
-        if not ops:
-            ops = []
-
-        for op in ops:
-            if isinstance(op, dict):
-                self.ops.append(op_from_dict(op))
-            else:
-                self.ops.append(op)
+        self.ops = ops
 
     def __repr__(self):
-        return f'<Delta {self.ops}>'
+        return f'<Delta {truncate_repr(self.ops)}>'
 
     def __eq__(self, other):
         return self.ops == other.ops
-
-    def __iter__(self):
-        return iter(self.ops)
 
     def __str__(self):
         return json.dumps(self.asdata())
@@ -56,36 +117,29 @@ class Delta:
         return [op.asdata() for op in self.ops]
 
     def push(self, new_op: OperationType):
-        if isinstance(new_op, dict):
-            new_op = op_from_dict(new_op)
-
+        new_op = clean_operation(new_op)
         index = len(self.ops)
-
-        if index > 0:
-            last_op = self.ops[-1]
-        else:
-            last_op = None
+        last_op = self.ops.last
 
         if last_op:
-            if isinstance(new_op, Delete) and isinstance(last_op, Delete):
+            if is_delete(new_op) and is_delete(last_op):
                 self.ops[index - 1] = last_op + new_op
                 return self
 
-            if isinstance(new_op, Insert) and isinstance(last_op, Delete):
+            if is_insert(new_op) and is_delete(last_op):
                 index -= 1
 
-                try:
-                    last_op = self.ops[index - 1]
-                except IndexError:
+                if not self.ops.last:
                     self.ops.insert(0, new_op)
                     return self
 
-            if all(map(lambda op: isinstance(op, (Insert, Retain)), [new_op, last_op])):
-                if isinstance(new_op, type(last_op)):
-                    if new_op.attributes == last_op.attributes:
-                        if type(new_op.value) == type(last_op.value):
-                            self.ops[index - 1] = last_op + new_op
-                            return self
+            op_types = type(new_op), type(last_op)
+
+            if Delete not in op_types:
+                if new_op.attributes == last_op.attributes:
+                    if op_types[0] == op_types[1]:
+                        self.ops[index - 1] = last_op + new_op
+                        return self
 
         if index == len(self.ops):
             self.ops.append(new_op)
@@ -121,18 +175,12 @@ class Delta:
         return self
 
     def chop(self):
-        if len(self.ops) > 0:
-            last_op = self.ops[-1]
-
-            if isinstance(last_op, Retain) and not last_op.attributes:
-                self.ops.pop()
-
-        return self
+        return Delta(self.ops.chop())
 
     def partition(self, func):
         passed, failed = [], []
 
-        for op in self:
+        for op in self.ops:
             if func(op):
                 passed.append(op)
             else:
@@ -145,9 +193,9 @@ class Delta:
 
     def change_length(self):
         def reducer(length, op):
-            if isinstance(op, Insert):
+            if is_insert(op):
                 return length + op.length
-            elif isinstance(op, Delete):
+            elif is_delete(op):
                 return length - op.length
             else:
                 return length
@@ -172,7 +220,7 @@ class Delta:
                 self_op = self_iter.next(length)
                 other_op = other_iter.next(length)
 
-                if isinstance(other_op, Retain):
+                if is_retain(other_op):
                     attrs = {}
                     if other_op.attributes:
                         attrs.update(other_op.attributes)
@@ -180,13 +228,13 @@ class Delta:
                     if self_op.attributes:
                         attrs.update(self_op.attributes)
 
-                    if isinstance(self_op, Retain):
+                    if is_retain(self_op):
                         new_op = Retain(length, attrs or None)
                     else:
                         new_op = Insert(self_op.value, attrs or None)
 
                     delta.push(new_op)
-                elif isinstance(other_op, Delete) and isinstance(self_op, Retain):
+                elif is_delete(other_op) and is_retain(self_op):
                     delta.push(other_op)
 
         delta.chop()
@@ -210,7 +258,7 @@ class Delta:
         return Delta(ops)
 
     def concat(self, other):
-        delta = Delta(self.ops.copy())
+        delta = Delta(self.ops)
 
         if len(other.ops) > 0:
             delta.push(other.ops[0])
@@ -233,7 +281,7 @@ class Delta:
             self_op = cursor.peek()
             start = self_op.length - cursor.peek_length()
 
-            if isinstance(self_op, Insert) and isinstance(self_op.value, str):
+            if it_insert_text(self_op):
                 try:
                     index = self_op.value.index(newline, start) - start
                 except ValueError:

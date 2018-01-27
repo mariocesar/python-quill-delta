@@ -3,7 +3,7 @@ import unittest
 import pytest
 
 from quilldelta import Delta, Retain, Insert, Delete
-from quilldelta.delta import op_from_dict
+from quilldelta.utils import op_from_dict
 
 
 class TestParser(unittest.TestCase):

@@ -1,8 +1,10 @@
+import unittest
 from unittest import mock
+from unittest.mock import MagicMock, call
 
 import pytest
 
-from quilldelta import Delta
+from quilldelta import Delta, Insert
 
 
 class TestConcat:
@@ -51,6 +53,61 @@ class TestChop:
         expected = Delta().insert('Test').retain(4, {'bold': True})
 
         assert delta.chop().ops == expected.ops
+
+
+class TestIteration(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.delta = (Delta()
+                     .insert('Hello')
+                     .insert({'image': True})
+                     .insert('World !'))
+
+    def test_filter(self):
+        ops = self.delta.ops.filter(lambda op: isinstance(op, Insert))
+
+        assert len(ops) == 3
+
+        ops = (ops.filter(lambda op: isinstance(op.value, str)))
+
+        assert len(ops) == 2
+
+    def test_foreach(self):
+        spy_mock = MagicMock()
+
+        for op in self.delta.ops:
+            spy_mock(op)
+
+        assert spy_mock.call_count == 3
+
+        assert spy_mock.call_args_list == [
+            call(Insert('Hello', None)),
+            call(Insert({'image': True}, None)),
+            call(Insert('World !', None))
+        ]
+
+    def test_map(self):
+        def filterfunc(op):
+            if isinstance(op, Insert):
+                if isinstance(op.value, str):
+                    return op.value
+                return ''
+
+        ops = list(map(filterfunc, self.delta.ops))
+
+        assert ops == ['Hello', '', 'World !']
+
+    def test_partition(self):
+        def string_inserts(op):
+            if isinstance(op, Insert):
+                if isinstance(op.value, str):
+                    return op.value
+                return ''
+
+        passed, failed = self.delta.partition(string_inserts)
+
+        assert passed == [self.delta.ops[0], self.delta.ops[2]]
+        assert failed == [self.delta.ops[1]]
 
 
 class TestEachLine:
