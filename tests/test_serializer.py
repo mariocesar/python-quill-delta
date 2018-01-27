@@ -6,7 +6,7 @@ from quilldelta import Delta, Retain, Insert, Delete
 from quilldelta.utils import op_from_dict
 
 
-class TestParser(unittest.TestCase):
+class TestParser:
     def test_insert_from_dict(self):
         assert op_from_dict({'insert': 1}) == Insert(1, None)
         assert op_from_dict({'insert': 'foo'}) == Insert('foo', None)

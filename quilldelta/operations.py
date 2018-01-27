@@ -6,16 +6,16 @@ def as_json(instance):
     return json.dumps(instance.as_data())
 
 
-def add_op(instance, other):
+def sum_operation(instance, other):
     type_op = type(instance)
     type_other = type(other)
 
-    assert type(other) == type_op, \
-        f'Operations are not from the same type {type_op} != {type_other}'
+    if type(other) != type_op:
+        raise ValueError(f'Operations are not from the same type {type_op.__name__} != {type_other}')
 
     if hasattr(instance, 'attributes'):
-        assert instance.attributes == other.attributes, \
-            'Can not sum insert operations with different attributes'
+        if instance.attributes != other.attributes:
+            raise ValueError('Can not add operations with different attributes')
 
         return type_op(instance.value + other.value, other.attributes)
     else:
@@ -40,8 +40,9 @@ def fromdict(cls, data: dict):
 class Insert(namedtuple('Insert', 'value, attributes')):
     __slots__ = ()
     __str__ = as_json
-    __add__ = add_op
+    __add__ = sum_operation
     as_data = as_data
+    as_json = as_json
 
     @classmethod
     def fromdict(cls, data):
@@ -58,8 +59,9 @@ class Insert(namedtuple('Insert', 'value, attributes')):
 class Retain(namedtuple('Retain', 'value, attributes')):
     __slots__ = ()
     __str__ = as_json
-    __add__ = add_op
+    __add__ = sum_operation
     as_data = as_data
+    as_json = as_json
 
     @classmethod
     def fromdict(cls, data: dict):
@@ -74,8 +76,9 @@ class Retain(namedtuple('Retain', 'value, attributes')):
 class Delete(namedtuple('Delete', 'value')):
     __slots__ = ()
     __str__ = as_json
-    __add__ = add_op
+    __add__ = sum_operation
     as_data = as_data
+    as_json = as_json
 
     @classmethod
     def fromdict(cls, data: dict):
