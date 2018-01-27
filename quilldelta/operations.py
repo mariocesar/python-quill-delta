@@ -3,7 +3,7 @@ from collections import namedtuple
 
 
 def as_json(instance):
-    return json.dumps(instance.asdata())
+    return json.dumps(instance.as_data())
 
 
 def add_op(instance, other):
@@ -22,7 +22,7 @@ def add_op(instance, other):
         return type_op(instance.value + other.value)
 
 
-def asdata(instance):
+def as_data(instance):
     name = type(instance).__name__.lower()
     data = instance._asdict()
     value = data.pop('value')
@@ -41,7 +41,7 @@ class Insert(namedtuple('Insert', 'value, attributes')):
     __slots__ = ()
     __str__ = as_json
     __add__ = add_op
-    asdata = asdata
+    as_data = as_data
 
     @classmethod
     def fromdict(cls, data):
@@ -59,7 +59,7 @@ class Retain(namedtuple('Retain', 'value, attributes')):
     __slots__ = ()
     __str__ = as_json
     __add__ = add_op
-    asdata = asdata
+    as_data = as_data
 
     @classmethod
     def fromdict(cls, data: dict):
@@ -75,7 +75,7 @@ class Delete(namedtuple('Delete', 'value')):
     __slots__ = ()
     __str__ = as_json
     __add__ = add_op
-    asdata = asdata
+    as_data = as_data
 
     @classmethod
     def fromdict(cls, data: dict):

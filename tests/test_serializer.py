@@ -28,28 +28,28 @@ class TestParser(unittest.TestCase):
 
 class TestData(unittest.TestCase):
     def test_insert_as_data(self):
-        assert Insert('foo', None).asdata() == {'insert': 'foo'}
-        assert Insert('foo', {}).asdata() == {'insert': 'foo'}
-        assert Insert('foo', {'bold': True}).asdata() == {
+        assert Insert('foo', None).as_data() == {'insert': 'foo'}
+        assert Insert('foo', {}).as_data() == {'insert': 'foo'}
+        assert Insert('foo', {'bold': True}).as_data() == {
             'insert': 'foo',
             'attributes': {'bold': True}
         }
-        assert Insert(1, {'img': 'image.jpg'}).asdata() == {
+        assert Insert(1, {'img': 'image.jpg'}).as_data() == {
             'insert': 1,
             'attributes': {'img': 'image.jpg'}
         }
 
     def test_retain_as_data(self):
-        assert Retain(1, None).asdata() == {'retain': 1}
-        assert Retain(1, {}).asdata() == {'retain': 1}
-        assert Retain(1, {'bold': True}).asdata() == {
+        assert Retain(1, None).as_data() == {'retain': 1}
+        assert Retain(1, {}).as_data() == {'retain': 1}
+        assert Retain(1, {'bold': True}).as_data() == {
             'retain': 1,
             'attributes': {'bold': True}
         }
 
     def test_delete_as_data(self):
-        assert Delete(1).asdata() == {'delete': 1}
-        assert Delete(2).asdata() == {'delete': 2}
+        assert Delete(1).as_data() == {'delete': 1}
+        assert Delete(2).as_data() == {'delete': 2}
 
     def test_delta_as_data(self):
         delta = Delta(ops=[
@@ -68,7 +68,7 @@ class TestData(unittest.TestCase):
             {'retain': 6}
         ]
 
-        self.assertListEqual(delta.asdata(), expected)
+        self.assertListEqual(delta.as_data(), expected)
 
 
 class TestAsStringJson(unittest.TestCase):
@@ -102,7 +102,7 @@ class TestAsStringJson(unittest.TestCase):
             {'retain': 6}
         ]
 
-        self.assertListEqual(delta.asdata(), expected)
+        self.assertListEqual(delta.as_data(), expected)
 
     def test_delta_as_string(self):
         delta = Delta(ops=[

@@ -111,10 +111,22 @@ class Delta:
         return self.ops == other.ops
 
     def __str__(self):
-        return json.dumps(self.asdata())
+        return self.as_json()
 
-    def asdata(self):
-        return [op.asdata() for op in self.ops]
+    def as_data(self):
+        return [op.as_data() for op in self.ops]
+
+    def as_text(self):
+        return ''.join(self.ops.filter(it_insert_text))
+
+    def as_json(self):
+        return json.dumps(self.as_data())
+
+    def as_markdown(self):
+        raise NotImplementedError
+
+    def as_html(self):
+        raise NotImplementedError
 
     def push(self, new_op: OperationType):
         new_op = clean_operation(new_op)
@@ -307,3 +319,4 @@ class Delta:
 
     def transform_position(self, index, priority):
         raise NotImplementedError
+
