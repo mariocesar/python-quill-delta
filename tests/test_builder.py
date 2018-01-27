@@ -49,6 +49,19 @@ class TestConstructor:
 
         assert delta.ops == original.ops
 
+    def test_delta_chain(self):
+        delta = (Delta()
+                     .insert('Hello')
+                     .insert({'image': True})
+                     .insert('World'))
+
+        assert delta.ops == [
+            Insert('Hello', None),
+            Insert({'image': True}, None),
+            Insert('World', None),
+        ]
+
+
 
 class TestInsert:
     def test_insert_text(self):
@@ -103,6 +116,11 @@ class TestInsert:
     def test_insert_text_after_delete(self):
         delta = Delta().delete(1).insert('a')
         expected = Delta().insert('a').delete(1)
+
+        assert delta == expected, [delta.ops, expected.ops]
+
+        delta = Delta().delete(1).insert('a').insert('b')
+        expected = Delta().insert('a').insert('b').delete(1)
 
         assert delta == expected, [delta.ops, expected.ops]
 
@@ -173,7 +191,7 @@ class TestDelete:
 
         assert delta.ops == [Insert('foo bar', None)]
 
-        delta.delete(2).delete(2)
+        delta = delta.delete(2).delete(2)
 
         delta.insert(' ')
         delta.insert('baz')

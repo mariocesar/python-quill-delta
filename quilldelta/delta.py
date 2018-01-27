@@ -1,8 +1,8 @@
 import json
-from functools import reduce
 from collections.abc import Sequence
+from functools import reduce
 from math import inf
-from typing import Any, Union, List, Iterable, TypeVar, Dict
+from typing import Union, List, Iterable, TypeVar, Dict
 
 from .iterator import Iterator
 from .operations import Insert, Retain, Delete
@@ -26,7 +26,7 @@ class Operations(Sequence):
             self.append.inner(self, item)
 
     def __repr__(self):
-        return f'<Operations {truncate_repr(self._items)}>'
+        return f'<Operations {truncate_repr(self._items)} at {id(self)}>'
 
     def __len__(self):
         return len(self._items)
@@ -77,7 +77,7 @@ class Operations(Sequence):
 
     @chainable
     def chop(self):
-        if self.last and is_retain(self.last) and self.last.attributes:
+        if self.last and is_retain(self.last) and not self.last.attributes:
             self._items.pop()
 
 
@@ -92,7 +92,7 @@ class Delta:
 
         if isinstance(ops, dict):
             assert 'ops' in ops, 'Unknown form, missing "ops" key.'
-            ops = Operations(ops['ops'])
+            ops = ops['ops']
         elif isinstance(ops, Delta):
             ops = ops.ops
         elif isinstance(ops, Operations):
@@ -100,18 +100,22 @@ class Delta:
         elif isinstance(ops, list):
             ops = [clean_operation(op) for op in ops]
         elif not ops:
-            ops = Operations()
+            ops = []
 
-        self.ops = ops
+        self.ops = Operations(ops)
 
     def __repr__(self):
-        return f'<Delta {truncate_repr(self.ops)}>'
+        return f'<Delta {self.ops} at 0x{id(self)}>'
 
     def __eq__(self, other):
         return self.ops == other.ops
 
     def __str__(self):
         return self.as_json()
+
+    def __copy__(self):
+        delta = Delta([op for op in self.ops])
+        return delta
 
     def as_data(self):
         return [op.as_data() for op in self.ops]
@@ -128,39 +132,7 @@ class Delta:
     def as_html(self):
         raise NotImplementedError
 
-    def push(self, new_op: OperationType):
-        new_op = clean_operation(new_op)
-        index = len(self.ops)
-        last_op = self.ops.last
-
-        if last_op:
-            if is_delete(new_op) and is_delete(last_op):
-                self.ops[index - 1] = last_op + new_op
-                return self
-
-            if is_insert(new_op) and is_delete(last_op):
-                index -= 1
-
-                if not self.ops.last:
-                    self.ops.insert(0, new_op)
-                    return self
-
-            op_types = type(new_op), type(last_op)
-
-            if Delete not in op_types:
-                if new_op.attributes == last_op.attributes:
-                    if op_types[0] == op_types[1]:
-                        self.ops[index - 1] = last_op + new_op
-                        return self
-
-        if index == len(self.ops):
-            self.ops.append(new_op)
-        else:
-            self.ops.insert(index, new_op)
-
-        return self
-
-    def insert(self, value: Any, attributes: dict = None):
+    def insert(self, value: Union[str, Dict], attributes: dict = None):
         if not attributes:
             attributes = None
 
@@ -184,6 +156,7 @@ class Delta:
     def delete(self, length: int):
         if length > 0:
             self.push(Delete(length))
+
         return self
 
     def chop(self):
@@ -203,6 +176,14 @@ class Delta:
     def reduce(self, func, initial=0):
         return reduce(func, self.ops, initial=initial)
 
+    def concat(self, other):
+        delta = Delta(self.ops)
+
+        for op in other.ops:
+            delta.push(op)
+
+        return delta
+
     def change_length(self):
         def reducer(length, op):
             if is_insert(op):
@@ -216,6 +197,43 @@ class Delta:
 
     def length(self):
         return reduce(lambda length, op: op.length + length, self.ops, 0)
+
+    def push(self, new_op: OperationType):
+        new_op = clean_operation(new_op)
+        index = len(self.ops)
+        last_op = self.ops.last
+
+        if last_op:
+
+            if is_delete(new_op) and is_delete(last_op):
+                self.ops[index - 1] = last_op + new_op
+                return self
+
+            if is_insert(new_op) and is_delete(last_op):
+                index -= 1
+                previous_op = self.ops[index - 1]
+
+                if it_insert_text(previous_op):
+                    self.ops[index - 1] = previous_op + new_op
+                    return self
+
+            op_types = type(new_op), type(last_op)
+
+            if Delete not in op_types:
+                if new_op.attributes == last_op.attributes:
+                    if it_insert_text(last_op) and it_insert_text(new_op):
+                        self.ops[index - 1] = last_op + new_op
+                        return self
+                    if is_retain(last_op) and is_retain(new_op):
+                        self.ops[index - 1] = last_op + new_op
+                        return self
+
+        if index == len(self.ops):
+            self.ops.append(new_op)
+        else:
+            self.ops.insert(index, new_op)
+
+        return self
 
     def compose(self, other: TypeVar('Delta')):
         self_iter = Iterator(self.ops)
@@ -269,15 +287,6 @@ class Delta:
 
         return Delta(ops)
 
-    def concat(self, other):
-        delta = Delta(self.ops)
-
-        if len(other.ops) > 0:
-            delta.push(other.ops[0])
-            delta.ops = delta.ops + other.ops[1:]
-
-        return delta
-
     def diff(self, other, index):
         raise NotImplementedError
 
@@ -319,4 +328,3 @@ class Delta:
 
     def transform_position(self, index, priority):
         raise NotImplementedError
-

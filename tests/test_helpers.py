@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, call
 
 import pytest
 
-from quilldelta import Delta, Insert
+from quilldelta import Delta, Insert, Retain
 
 
 class TestConcat:
@@ -28,27 +28,28 @@ class TestConcat:
     def test_mergeable(self):
         delta = Delta().insert('Test', {'bold': True})
         original = Delta().insert('Test', {'bold': True})
+
         concat = Delta().insert('!', {'bold': True}).insert('\n')
         expected = Delta().insert('Test!', {'bold': True}).insert('\n')
 
-        assert delta.concat(concat).ops == expected.ops
+        assert delta.concat(concat) == expected
         assert delta.ops == original.ops
 
 
 class TestChop:
-    def test_retain(self):
+    def test_chop_retain(self):
         delta = Delta().insert('Test').retain(4)
         expected = Delta().insert('Test')
 
         assert delta.chop().ops == expected.ops
 
-    def test_insert(self):
+    def test_chop_insert(self):
         delta = Delta().insert('Test')
         expected = Delta().insert('Test')
 
         assert delta.chop().ops == expected.ops
 
-    def test_formatted_retain(self):
+    def test_chop_formatted_retain(self):
         delta = Delta().insert('Test').retain(4, {'bold': True})
         expected = Delta().insert('Test').retain(4, {'bold': True})
 

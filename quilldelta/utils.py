@@ -25,7 +25,7 @@ def clean_operation(value: CleanValueType):
 def truncate_repr(items: list, length=10):
     items = items[:length]
     items = str(items).strip('[]')
-    return f'[{items}{", ..." if items < 10 else ""}]'
+    return f'[{items}{", ..." if len(items) < 10 else ""}]'
 
 
 def op_from_dict(data: dict):
