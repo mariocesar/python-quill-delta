@@ -1,3 +1,5 @@
+from itertools import chain
+
 import pytest
 
 from quilldelta.reader import OperationsReader
@@ -91,6 +93,27 @@ async def test_reader_contextmanager():
         assert async_reader.tell() == 4
 
     assert async_reader.tell() == 0
+
+    chained = []
+
+    with OperationsReader([1, 2, 3, 4]) as reader1:
+        with OperationsReader([5, 6, 7, 8]) as reader2:
+            for op in chain(reader1, reader2):
+                chained.append(op)
+
+    assert chained == [1, 2, 3, 4, 5, 6, 7, 8]
+
+    chained = []
+
+    async with OperationsReader([1, 2, 3, 4]) as reader1:
+        async with OperationsReader([5, 6, 7, 8]) as reader2:
+            while not reader1.eof:
+                chained.append(await reader1.async_read())
+
+            while not reader2.eof:
+                chained.append(await reader2.async_read())
+
+    assert chained == [1, 2, 3, 4, 5, 6, 7, 8]
 
 
 @pytest.mark.asyncio
