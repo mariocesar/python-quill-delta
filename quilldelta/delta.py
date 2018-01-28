@@ -1,6 +1,7 @@
 import json
-from collections.abc import Sequence
+from collections.abc import Sequence, Set, Sized
 from functools import reduce
+from itertools import zip_longest
 from math import inf
 from typing import Union, List, Iterable, TypeVar, Dict
 
@@ -24,6 +25,9 @@ class Operations(Sequence):
 
         for item in items:
             self.append.inner(self, item)
+
+    def __hash__(self):
+        return Set._hash(self)
 
     def __repr__(self):
         return f'<Operations {truncate_repr(self._items)} at {id(self)}>'
@@ -84,7 +88,9 @@ class Operations(Sequence):
 DeltaOperationsType = Union[List, Dict, TypeVar('Delta'), Operations]
 
 
-class Delta:
+class Delta(Sized, Iterable):
+    __slots__ = ('ops',)
+
     def __init__(self, ops: DeltaOperationsType = None):
         if ops:
             assert isinstance(ops, (list, dict, Delta, Operations)), \
@@ -107,15 +113,28 @@ class Delta:
     def __repr__(self):
         return f'<Delta {self.ops} at 0x{id(self)}>'
 
+    def __hash__(self):
+        return hash(self.ops)
+
     def __eq__(self, other):
+        if not isinstance(other, Delta):
+            return False
         return self.ops == other.ops
 
     def __str__(self):
         return self.as_json()
 
-    def __copy__(self):
-        delta = Delta([op for op in self.ops])
-        return delta
+    def __iter__(self):
+        return iter(self.ops)
+
+    def __len__(self):
+        return len(self.ops)
+
+    def copy(self):
+        return Delta([op for op in self.ops])
+
+    def length(self):
+        return reduce(lambda length, op: op.length + length, self.ops, 0)
 
     def as_data(self):
         return [op.as_data() for op in self.ops]
@@ -138,9 +157,9 @@ class Delta:
 
         if isinstance(value, str):
             if len(value) > 0:
-                self.push(Insert(value, attributes))
+                self.append(Insert(value, attributes))
         else:
-            self.push(Insert(value, attributes))
+            self.append(Insert(value, attributes))
 
         return self
 
@@ -149,13 +168,13 @@ class Delta:
             attributes = None
 
         if length > 0:
-            self.push(Retain(length, attributes))
+            self.append(Retain(length, attributes))
 
         return self
 
     def delete(self, length: int):
         if length > 0:
-            self.push(Delete(length))
+            self.append(Delete(length))
 
         return self
 
@@ -180,7 +199,7 @@ class Delta:
         delta = Delta(self.ops)
 
         for op in other.ops:
-            delta.push(op)
+            delta.append(op)
 
         return delta
 
@@ -195,11 +214,8 @@ class Delta:
 
         return self.reduce(reducer, 0)
 
-    def length(self):
-        return reduce(lambda length, op: op.length + length, self.ops, 0)
-
-    def push(self, new_op: OperationType):
-        new_op = clean_operation(new_op)
+    def append(self, value: OperationType):
+        new_op = clean_operation(value)
         index = len(self.ops)
         last_op = self.ops.last
 
@@ -238,34 +254,32 @@ class Delta:
     def compose(self, other: TypeVar('Delta')):
         self_iter = Iterator(self.ops)
         other_iter = Iterator(other.ops)
+
         delta = Delta()
 
-        while self_iter.has_next() or other_iter.has_next():
+        while self_iter.has_next() and other_iter.has_next():
             if other_iter.peek_type() == Insert:
-                delta.push(other_iter.next())
+                delta.append(other_iter.next())
             elif self_iter.peek_type() == Delete:
-                delta.push(self_iter.next())
+                delta.append(other_iter.next())
             else:
                 length = min(self_iter.peek_length(), other_iter.peek_length())
+
                 self_op = self_iter.next(length)
                 other_op = other_iter.next(length)
 
+                print()
+                print('min length', self_op, other_op)
+
                 if is_retain(other_op):
-                    attrs = {}
-                    if other_op.attributes:
-                        attrs.update(other_op.attributes)
-
-                    if self_op.attributes:
-                        attrs.update(self_op.attributes)
-
                     if is_retain(self_op):
-                        new_op = Retain(length, attrs or None)
+                        new_op = Retain(length, None)
                     else:
-                        new_op = Insert(self_op.value, attrs or None)
+                        new_op = Insert(self_op.value, None)
 
-                    delta.push(new_op)
+                    delta.append(new_op)
                 elif is_delete(other_op) and is_retain(self_op):
-                    delta.push(other_op)
+                    delta.append(other_op)
 
         delta.chop()
 
@@ -311,9 +325,9 @@ class Delta:
                 index = -1
 
             if index < 0:
-                line.push(cursor.next())
+                line.append(cursor.next())
             elif index > 0:
-                line.push(cursor.next(index))
+                line.append(cursor.next(index))
             else:
                 if not func(line, cursor.next(1).attributes, i):
                     return
