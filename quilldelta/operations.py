@@ -17,10 +17,13 @@ def _sum_operation(instance, other):
                          f'{type_op.__name__} != {type_other}')
 
     if hasattr(instance, 'attributes'):
-        if instance.attributes != other.attributes:
+        instance_attr = instance.attributes if instance.attributes else None
+        other_attr = other.attributes if other.attributes else None
+
+        if instance_attr != other_attr:
             raise ValueError("Can't sum operations with different attributes")
 
-        return type_op(instance.value + other.value, other.attributes)
+        return type_op(instance.value + other.value, other_attr)
     else:
         return type_op(instance.value + other.value)
 

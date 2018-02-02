@@ -53,6 +53,10 @@ class SequenceReader(Sized):
 
         return value
 
+    @property
+    def not_eof(self):
+        return not self.eof
+
     def tell(self):
         return self._index
 
@@ -76,13 +80,20 @@ class SequenceReader(Sized):
             self.eof = True
             self._index = len(self)
 
+    def peek(self):
+        try:
+            return self._data[self._index]
+        except IndexError:
+            pass
+        return
+
     def read(self):
         if self.eof:
             return None
 
-        try:
-            value = self._data[self._index]
-        except IndexError:
+        value = self.peek()
+
+        if not value:
             self.eof = True
             value = None
         else:

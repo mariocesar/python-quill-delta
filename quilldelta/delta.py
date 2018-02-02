@@ -7,14 +7,8 @@ from typing import Dict, Iterable, List, TypeVar, Union
 from .iterator import Iterator
 from .operations import Delete, Insert, Retain
 from .reader import SequenceReader
-from .utils import (
-    chainable,
-    clean_operation,
-    is_delete,
-    is_insert,
-    is_retain,
-    it_insert_text,
-    truncate_repr)
+from .utils import (chainable, clean_operation, is_delete, is_insert, is_retain, it_insert_text, op_from_dict,
+                    truncate_repr)
 
 OperationType = Union[Insert, Retain, Delete, Dict]
 
@@ -25,7 +19,12 @@ class OperationsReader(SequenceReader):
         self._offset = 0
 
     def length(self):
-        return self._data[self._index].length - self._offset
+        try:
+            self._data[self._index]
+        except IndexError:
+            return -1
+        else:
+            return self._data[self._index].length - self._offset
 
     def writable(self):
         return True
@@ -34,10 +33,12 @@ class OperationsReader(SequenceReader):
         pass
 
     def read(self, length=None):
-        op = super().read()  # type: Union[Insert, Retain, Delete]
+        peek = self.peek()
 
-        if not op:
-            return None
+        if peek is None:
+            return Retain(-1, None)
+
+        op = super().read()  # type: Union[Insert, Retain, Delete]
 
         if op.length is None:
             self._offset = 0
@@ -46,10 +47,14 @@ class OperationsReader(SequenceReader):
 
         if is_delete(op):
             return Delete(op.length)
-        elif is_retain(op):
-            return Retain(length, op.attributes)
-        elif is_insert(op):
-            return Insert(op.value[self._offset:length], op.attributes)
+        else:
+
+            if is_retain(op):
+                return Retain(length, op.attributes)
+            if it_insert_text(op):
+                return Insert(op.value[self._offset:length], op.attributes)
+            elif is_insert(op):
+                return Insert(op.value, op.attributes)
 
 
 class Operations(Sequence):
@@ -255,12 +260,12 @@ class Delta(Sized, Iterable):
         return self.reduce(reducer, 0)
 
     def push(self, value: OperationType):
+        # assert isinstance(value, OperationType)
         new_op = clean_operation(value)
         index = len(self.ops)
         last_op = self.ops.last
 
         if last_op:
-
             if is_delete(new_op) and is_delete(last_op):
                 self.ops[index - 1] = last_op + new_op
                 return self
@@ -276,7 +281,11 @@ class Delta(Sized, Iterable):
             op_types = type(new_op), type(last_op)
 
             if Delete not in op_types:
-                if new_op.attributes == last_op.attributes:
+                new_attr = new_op.attributes if new_op.attributes else None
+                last_attr = last_op.attributes if last_op.attributes else None
+
+                if new_attr == last_attr:
+
                     if it_insert_text(last_op) and it_insert_text(new_op):
                         self.ops[index - 1] = last_op + new_op
                         return self
@@ -297,26 +306,35 @@ class Delta(Sized, Iterable):
         with OperationsReader(self.ops) as this_reader, \
                 OperationsReader(other.ops) as other_reader:
 
-            while not (this_reader.eof and other_reader.eof):
-                this = this_reader.read()
-                other = other_reader.read()
+            while this_reader.not_eof or other_reader.not_eof:
+                other_peek = other_reader.peek()
 
-                if is_insert(other):
-                    delta.push(other)
-                elif is_delete(this):
-                    delta.push(this)
+                if is_insert(other_peek):
+                    delta.push(other_reader.read())
+                elif is_delete(other_peek):
+                    delta.push(other_reader.read())
                 else:
-                    if is_retain(other):
-                        attrs = {**(this.attributes or {}),
-                                 **(other.attributes or {})}
+                    length = min(this_reader.length(), other_reader.length())
+                    length = length if length > 0 else None
 
-                        if is_retain(this):
-                            delta.push(Retain(self.length(), attrs))
+                    a = this_reader.read(length)
+                    b = other_reader.read(length)
+
+                    if is_retain(b):
+                        op = {'attributes': {
+                            **(a.attributes or {}),
+                            **(b.attributes or {})
+                        }}
+
+                        if is_retain(a):
+                            op['retain'] = length
                         else:
-                            delta.push(Insert(this.value, attrs))
+                            op['insert'] = a.value
 
-                    elif is_delete(other) and is_retain(this):
-                        return delta.push(other)
+                        delta.push(op_from_dict(op))
+
+                    elif is_delete(b) and is_retain(a):
+                        delta.push(b)
 
         delta.chop()
 
