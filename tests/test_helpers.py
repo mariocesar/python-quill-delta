@@ -1,10 +1,8 @@
-import unittest
-from unittest import mock
-from unittest.mock import MagicMock, call
+from unittest import TestCase, mock
 
 import pytest
 
-from quilldelta import Delta, Insert, Retain
+from quilldelta import Delta, Insert
 
 
 class TestConcat:
@@ -56,7 +54,7 @@ class TestChop:
         assert delta.chop().ops == expected.ops
 
 
-class TestIteration(unittest.TestCase):
+class TestIteration(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.delta = (Delta()
@@ -74,7 +72,7 @@ class TestIteration(unittest.TestCase):
         assert len(ops) == 2
 
     def test_foreach(self):
-        spy_mock = MagicMock()
+        spy_mock = mock.MagicMock()
 
         for op in self.delta.ops:
             spy_mock(op)
@@ -82,9 +80,9 @@ class TestIteration(unittest.TestCase):
         assert spy_mock.call_count == 3
 
         assert spy_mock.call_args_list == [
-            call(Insert('Hello', None)),
-            call(Insert({'image': True}, None)),
-            call(Insert('World !', None))
+            mock.call(Insert('Hello', None)),
+            mock.call(Insert({'image': True}, None)),
+            mock.call(Insert('World !', None))
         ]
 
     def test_map(self):

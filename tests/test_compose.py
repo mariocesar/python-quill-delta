@@ -74,7 +74,5 @@ class TestCompose:
 
         expected = Delta().insert('HelXlo')
         compose = a.compose(b)
-        print()
-        print(compose)
 
         assert compose.ops == expected.ops, compose.ops

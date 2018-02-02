@@ -1,13 +1,11 @@
-from functools import wraps, partial
-from typing import Union, Dict
+from functools import partial, wraps
+from typing import Dict, Union
 
-from .operations import Insert, Retain, Delete
+from .operations import Delete, Insert, Retain
 
 is_insert = lambda op: isinstance(op, Insert)
 is_retain = lambda op: isinstance(op, Retain)
 is_delete = lambda op: isinstance(op, Delete)
-is_operation = partial(isinstance, A_tuple=(Insert, Retain, Delete))
-
 it_insert_text = lambda op: is_insert(op) and isinstance(op.value, str)
 
 CleanValueType = Union[Insert, Retain, Delete, Dict]

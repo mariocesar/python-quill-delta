@@ -1,6 +1,8 @@
-import pytest
 from functools import reduce
-from quilldelta import Insert, Retain, Delete
+
+import pytest
+
+from quilldelta import Delete, Insert, Retain
 
 
 class TestInsert:
@@ -8,13 +10,13 @@ class TestInsert:
         op = Insert('foo', None)
 
         assert op.value == 'foo'
-        assert op.attributes == None
+        assert op.attributes is None
         assert op.length == 3
 
         op = Insert(1, None)
 
         assert op.value == 1
-        assert op.attributes == None
+        assert op.attributes is None
 
     def test_insert_attributes(self):
         op = Insert('foo', {'bold': True})
@@ -25,13 +27,13 @@ class TestInsert:
         op = Insert.fromdict({'insert': 'foo'})
 
         assert op.value == 'foo'
-        assert op.attributes == None
+        assert op.attributes is None
 
     def test_insert_embed(self):
         op = Insert({'image': 'photo.jpg'}, None)
 
         assert op.value == {'image': 'photo.jpg'}
-        assert op.attributes == None
+        assert op.attributes is None
 
         assert op.length == 1
 
@@ -49,7 +51,7 @@ class TestInsert:
         op = Insert('foo', None) + Insert(' bar', None)
         assert op == Insert('foo bar', None)
 
-        op = reduce(lambda op, other: op + other, [
+        op = reduce(lambda o, other: o + other, [
             Insert('foo', None),
             Insert(' ', None),
             Insert('bar', None)])
@@ -60,12 +62,12 @@ class TestInsert:
         assert op == Insert('foo bar', {'bold': True})
 
         with pytest.raises(ValueError) as err:
-            op = Insert('foo', None) + 'bar'
+            Insert('foo', None) + 'bar'
 
         assert err.match('Operations are not from the same type')
 
         with pytest.raises(ValueError) as err:
-            op = Insert('foo', {'bold': True}) + Insert(' bar', {'bold': False})
+            Insert('foo', {'bold': True}) + Insert(' bar', {'bold': False})
 
         assert err.match('operations with different attributes')
 
@@ -76,7 +78,7 @@ class TestRetain:
 
         assert op.value == 1
         assert op.length == 1
-        assert op.attributes == None
+        assert op.attributes is None
 
     def test_retain_attributes(self):
         op = Retain(1, {'bold': True})
@@ -88,7 +90,7 @@ class TestRetain:
 
         assert op.value == 1
         assert op.length == 1
-        assert op.attributes == None
+        assert op.attributes is None
 
     def test_as_data(self):
         op = Retain(1, {'bold': True})
@@ -104,7 +106,7 @@ class TestRetain:
         op = Retain(1, None) + Retain(2, None)
         assert op == Retain(3, None)
 
-        op = reduce(lambda op, other: op + other, [
+        op = reduce(lambda o, other: o + other, [
             Retain(1, None),
             Retain(2, None),
             Retain(3, None)])
@@ -115,14 +117,15 @@ class TestRetain:
         assert op == Retain(3, {'bold': True})
 
         with pytest.raises(ValueError) as err:
-            op = Retain(1, None) + Insert('foo', None)
+            Retain(1, None) + Insert('foo', None)
 
         assert err.match('Operations are not from the same type')
 
         with pytest.raises(ValueError) as err:
-            op = Retain(1, {'bold': True}) + Retain(1, {'bold': False})
+            Retain(1, {'bold': True}) + Retain(1, {'bold': False})
 
         assert err.match('operations with different attributes')
+
 
 class TestDelete:
     def test_retain_constructor(self):
@@ -152,7 +155,7 @@ class TestDelete:
         op = Delete(1) + Delete(2)
         assert op == Delete(3)
 
-        op = reduce(lambda op, other: op + other, [
+        op = reduce(lambda o, other: o + other, [
             Delete(1),
             Delete(2),
             Delete(3)])
@@ -160,6 +163,6 @@ class TestDelete:
         assert op == Delete(6)
 
         with pytest.raises(ValueError) as err:
-            op = Delete(1) + Insert('foo', None)
+            Delete(1) + Insert('foo', None)
 
         assert err.match('Operations are not from the same type')

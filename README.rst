@@ -1,6 +1,5 @@
 Implements all quill-delta operations used in the quilljs editor in pure Python.
 
-
 ==================
 python-quill-delta
 ==================

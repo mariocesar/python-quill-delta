@@ -2,19 +2,19 @@ import json
 from collections.abc import Sequence, Set, Sized
 from functools import reduce
 from math import inf
-from typing import Union, List, Iterable, TypeVar, Dict
+from typing import Dict, Iterable, List, TypeVar, Union
 
 from .iterator import Iterator
-from .operations import Insert, Retain, Delete
+from .operations import Delete, Insert, Retain
 from .reader import SequenceReader
 from .utils import (
-    clean_operation,
-    truncate_repr,
     chainable,
-    is_insert,
+    clean_operation,
     is_delete,
+    is_insert,
     is_retain,
-    it_insert_text)
+    it_insert_text,
+    truncate_repr)
 
 OperationType = Union[Insert, Retain, Delete, Dict]
 
@@ -34,7 +34,6 @@ class OperationsReader(SequenceReader):
         pass
 
     def read(self, length=None):
-
         op = super().read()  # type: Union[Insert, Retain, Delete]
 
         if not op:

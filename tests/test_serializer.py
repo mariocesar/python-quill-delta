@@ -2,7 +2,7 @@ import unittest
 
 import pytest
 
-from quilldelta import Delta, Retain, Insert, Delete
+from quilldelta import Delete, Delta, Insert, Retain
 from quilldelta.utils import op_from_dict
 
 

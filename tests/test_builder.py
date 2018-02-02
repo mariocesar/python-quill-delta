@@ -1,7 +1,7 @@
 import pytest
 
-from quilldelta import Delta, Insert, Retain, Delete
-from quilldelta.delta import Operations
+from quilldelta.delta import Delta, Operations
+from quilldelta.operations import Delete, Insert, Retain
 
 
 def test_hash_delta():

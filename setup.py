@@ -21,6 +21,7 @@ setup(
     packages=find_packages(exclude='tests/*'),
     python_requires='>=3.6',
     setup_requires=['pytest-runner'],
+    develop_requires=['watchdog'],
     tests_require=['pytest', 'pytest-cov', 'pytest-asyncio'],
     classifiers=[
         'Development Status :: 3 - Alpha',
