@@ -64,7 +64,7 @@ class TestInsert:
         with pytest.raises(ValueError) as err:
             Insert('foo', None) + 'bar'
 
-        assert err.match('Operations are not from the same type')
+        assert err.match('Operations are not the same type')
 
         with pytest.raises(ValueError) as err:
             Insert('foo', {'bold': True}) + Insert(' bar', {'bold': False})
@@ -119,7 +119,7 @@ class TestRetain:
         with pytest.raises(ValueError) as err:
             Retain(1, None) + Insert('foo', None)
 
-        assert err.match('Operations are not from the same type')
+        assert err.match('Operations are not the same type')
 
         with pytest.raises(ValueError) as err:
             Retain(1, {'bold': True}) + Retain(1, {'bold': False})
@@ -165,4 +165,4 @@ class TestDelete:
         with pytest.raises(ValueError) as err:
             Delete(1) + Insert('foo', None)
 
-        assert err.match('Operations are not from the same type')
+        assert err.match('Operations are not the same type')
