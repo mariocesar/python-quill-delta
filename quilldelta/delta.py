@@ -40,7 +40,7 @@ class OperationsReader(SequenceReader):
 
         op = super().read()  # type: Union[Insert, Retain, Delete]
 
-        if op.length is None:
+        if op.length is not None:
             self._offset = 0
         else:
             self._offset = length
@@ -48,11 +48,10 @@ class OperationsReader(SequenceReader):
         if is_delete(op):
             return Delete(op.length)
         else:
-
             if is_retain(op):
                 return Retain(length, op.attributes)
             if it_insert_text(op):
-                return Insert(op.value[self._offset:length], op.attributes)
+                return Insert(op.value[self._offset:], op.attributes)
             elif is_insert(op):
                 return Insert(op.value, op.attributes)
 
@@ -319,7 +318,6 @@ class Delta(Sized, Iterable):
 
                     a = this_reader.read(length)
                     b = other_reader.read(length)
-
                     if is_retain(b):
                         op = {'attributes': {
                             **(a.attributes or {}),
