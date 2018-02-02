@@ -307,7 +307,8 @@ class Delta(Sized, Iterable):
                     delta.push(this)
                 else:
                     if is_retain(other):
-                        attrs = {**this.attributes, **other.attributes}
+                        attrs = {**(this.attributes or {}),
+                                 **(other.attributes or {})}
 
                         if is_retain(this):
                             delta.push(Retain(self.length(), attrs))

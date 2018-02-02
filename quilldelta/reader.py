@@ -3,7 +3,7 @@ from collections import Sized
 
 
 class SequenceReader(Sized):
-    __slots__ = ('_data', '_index', '_offset', 'eof')
+    __slots__ = ('_data', '_index', 'eof')
 
     def __init__(self, data=None):
         if not data:
