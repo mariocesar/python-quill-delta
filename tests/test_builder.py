@@ -248,40 +248,40 @@ class TestRetain:
 class TestPush:
     def test_push_into_empty(self):
         delta = Delta()
-        delta.append({'insert': 'test'})
+        delta.push({'insert': 'test'})
         assert len(delta.ops) == 1
 
     def test_push_consecutive_delete(self):
         delta = Delta().delete(2)
-        delta.append({'delete': 3})
+        delta.push({'delete': 3})
 
         assert len(delta.ops) == 1
         assert delta.ops == [Delete(5)]
 
     def test_push_consecutive_text(self):
         delta = Delta().insert('a')
-        delta.append({'insert': 'b'})
+        delta.push({'insert': 'b'})
 
         assert len(delta.ops) == 1
         assert delta.ops == [Insert('ab', None)]
 
     def test_push_consecutive_text_with_matching_attributes(self):
         delta = Delta().insert('a', {'bold': True})
-        delta.append({'insert': 'b', 'attributes': {'bold': True}})
+        delta.push({'insert': 'b', 'attributes': {'bold': True}})
 
         assert len(delta.ops) == 1
         assert delta.ops == [Insert('ab', {'bold': True})]
 
     def test_push_consecutive_retain_with_matching_attributes(self):
         delta = Delta().retain(1, {'bold': True})
-        delta.append({'retain': 3, 'attributes': {'bold': True}})
+        delta.push({'retain': 3, 'attributes': {'bold': True}})
 
         assert len(delta.ops) == 1
         assert delta.ops == [Retain(4, {'bold': True})]
 
     def test_push_consecutive_text_with_not_matching_attributes(self):
         delta = Delta().insert('a', {'bold': True})
-        delta.append({'insert': 'b'})
+        delta.push({'insert': 'b'})
 
         assert len(delta.ops) == 2
         assert delta.ops == [
@@ -291,7 +291,7 @@ class TestPush:
 
     def test_push_consecutive_retain_with_not_matching_attributes(self):
         delta = Delta().retain(1, {'bold': True})
-        delta.append({'retain': 3})
+        delta.push({'retain': 3})
 
         assert len(delta.ops) == 2
         assert delta.ops == [
@@ -301,7 +301,7 @@ class TestPush:
 
     def test_push_consecutive_embeds_with_matching_attributes(self):
         delta = Delta().insert(1, {'alt': 'Description'})
-        delta.append({'insert': {'url': 'http://quilljs.com'}, 'attributes': {'alt': 'Description'}})
+        delta.push({'insert': {'url': 'http://quilljs.com'}, 'attributes': {'alt': 'Description'}})
 
         assert len(delta.ops) == 2
         assert delta.ops == [

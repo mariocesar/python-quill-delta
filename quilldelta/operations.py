@@ -1,35 +1,38 @@
 import json
 from collections import namedtuple
 
+__all__ = ['Insert', 'Retain', 'Delete']
 
-def as_json(instance):
+
+def _as_json(instance):
     return json.dumps(instance.as_data())
 
 
-def sum_operation(instance, other):
+def _sum_operation(instance, other):
     type_op = type(instance)
     type_other = type(other)
 
     if type(other) != type_op:
-        raise ValueError(f'Operations are not from the same type {type_op.__name__} != {type_other}')
+        raise ValueError(f'Operations are not the same type '
+                         f'{type_op.__name__} != {type_other}')
 
     if hasattr(instance, 'attributes'):
         if instance.attributes != other.attributes:
-            raise ValueError('Can not add operations with different attributes')
+            raise ValueError("Can't sum operations with different attributes")
 
         return type_op(instance.value + other.value, other.attributes)
     else:
         return type_op(instance.value + other.value)
 
 
-def as_data(instance):
+def _as_data(instance):
     name = type(instance).__name__.lower()
     data = instance._asdict()
     value = data.pop('value')
     return {name: value, **{k: v for k, v in data.items() if v}}
 
 
-def fromdict(cls, data: dict):
+def _fromdict(cls, data: dict):
     name = cls.__name__.lower()
 
     if name in data:
@@ -39,15 +42,16 @@ def fromdict(cls, data: dict):
 
 class Insert(namedtuple('Insert', 'value, attributes')):
     __slots__ = ()
-    __str__ = as_json
-    __add__ = sum_operation
-    as_data = as_data
-    as_json = as_json
+    __str__ = _as_json
+    __add__ = _sum_operation
+
+    as_data = _as_data
+    as_json = _as_json
 
     @classmethod
     def fromdict(cls, data):
         data.setdefault('attributes', None)
-        return fromdict(cls, data)
+        return _fromdict(cls, data)
 
     @property
     def length(self):
@@ -58,15 +62,16 @@ class Insert(namedtuple('Insert', 'value, attributes')):
 
 class Retain(namedtuple('Retain', 'value, attributes')):
     __slots__ = ()
-    __str__ = as_json
-    __add__ = sum_operation
-    as_data = as_data
-    as_json = as_json
+    __str__ = _as_json
+    __add__ = _sum_operation
+
+    as_data = _as_data
+    as_json = _as_json
 
     @classmethod
     def fromdict(cls, data: dict):
         data.setdefault('attributes', None)
-        return fromdict(cls, data)
+        return _fromdict(cls, data)
 
     @property
     def length(self):
@@ -75,14 +80,15 @@ class Retain(namedtuple('Retain', 'value, attributes')):
 
 class Delete(namedtuple('Delete', 'value')):
     __slots__ = ()
-    __str__ = as_json
-    __add__ = sum_operation
-    as_data = as_data
-    as_json = as_json
+    __str__ = _as_json
+    __add__ = _sum_operation
+
+    as_data = _as_data
+    as_json = _as_json
 
     @classmethod
     def fromdict(cls, data: dict):
-        return fromdict(cls, data)
+        return _fromdict(cls, data)
 
     @property
     def length(self):

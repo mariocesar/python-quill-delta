@@ -2,14 +2,14 @@ from itertools import chain
 
 import pytest
 
-from quilldelta.reader import OperationsReader
+from quilldelta.reader import SequenceReader
 
 
 def test_empty_reader_constructor():
-    reader = OperationsReader()
+    reader = SequenceReader()
 
     assert reader.tell() == 0
-    assert reader.length() == 0
+    assert len(reader) == 0
     assert reader.getvalue() == []
 
     assert not reader.readable()
@@ -23,10 +23,10 @@ def test_empty_reader_constructor():
 
 
 def test_reader_constructor():
-    reader = OperationsReader([1, 2, 3, 4])
+    reader = SequenceReader([1, 2, 3, 4])
 
     assert reader.tell() == 0
-    assert reader.length() == 4
+    assert len(reader) == 4
     assert reader.getvalue() == [1, 2, 3, 4]
 
     assert reader.readable()
@@ -43,7 +43,7 @@ def test_reader_constructor():
 
 
 def test_reader_seek():
-    reader = OperationsReader([1, 2, 3, 4])
+    reader = SequenceReader([1, 2, 3, 4])
     assert reader.tell() == 0
 
     assert reader.read() == 1
@@ -63,7 +63,7 @@ def test_reader_seek():
 
 @pytest.mark.asyncio
 async def test_reader_contextmanager():
-    with OperationsReader([1, 2, 3, 4]) as reader:
+    with SequenceReader([1, 2, 3, 4]) as reader:
         assert reader.tell() == 0
         assert reader.read() == 1
 
@@ -80,7 +80,7 @@ async def test_reader_contextmanager():
 
     assert reader.tell() == 0
 
-    async with OperationsReader([1, 2, 3, 4]) as async_reader:
+    async with SequenceReader([1, 2, 3, 4]) as async_reader:
         assert async_reader.tell() == 0
         assert async_reader.read() == 1
         assert async_reader.read() == 2
@@ -96,8 +96,8 @@ async def test_reader_contextmanager():
 
     chained = []
 
-    with OperationsReader([1, 2, 3, 4]) as reader1:
-        with OperationsReader([5, 6, 7, 8]) as reader2:
+    with SequenceReader([1, 2, 3, 4]) as reader1:
+        with SequenceReader([5, 6, 7, 8]) as reader2:
             for op in chain(reader1, reader2):
                 chained.append(op)
 
@@ -105,8 +105,8 @@ async def test_reader_contextmanager():
 
     chained = []
 
-    async with OperationsReader([1, 2, 3, 4]) as reader1:
-        async with OperationsReader([5, 6, 7, 8]) as reader2:
+    async with SequenceReader([1, 2, 3, 4]) as reader1:
+        async with SequenceReader([5, 6, 7, 8]) as reader2:
             while not reader1.eof:
                 chained.append(await reader1.async_read())
 
@@ -118,7 +118,7 @@ async def test_reader_contextmanager():
 
 @pytest.mark.asyncio
 async def test_reader_iterator():
-    with OperationsReader([1, 2, 3, 4]) as reader:
+    with SequenceReader([1, 2, 3, 4]) as reader:
         data = []
 
         for op in reader:
@@ -126,7 +126,7 @@ async def test_reader_iterator():
 
         assert data == [1, 2, 3, 4]
 
-    async with OperationsReader([1, 2, 3, 4]) as reader:
+    async with SequenceReader([1, 2, 3, 4]) as reader:
         data = []
 
         async for op in reader:

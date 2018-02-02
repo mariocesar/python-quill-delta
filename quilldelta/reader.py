@@ -1,15 +1,15 @@
+import asyncio
 from collections import Sized
 
 
-class OperationsReader(Sized):
-    __slots__ = ('_data', '_index', '_async', 'eof')
+class SequenceReader(Sized):
+    __slots__ = ('_data', '_index', '_offset', 'eof')
 
     def __init__(self, data=None):
         if not data:
             data = []
 
         self.eof = False
-        self._async = False
         self._index = 0
         self._data = data
 
@@ -30,29 +30,28 @@ class OperationsReader(Sized):
 
         if value is None:
             self.eof = True
-            if self._async:
-                raise StopAsyncIteration
-            else:
-                raise StopIteration
+            raise StopIteration
 
         return value
 
     async def __aenter__(self):
-        self._async = True
-        return self.__enter__()
+        return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-        self._async = False
         self.__exit__(exc_type, exc_value, traceback)
 
     async def __aiter__(self):
-        return self.__iter__()
+        return self
 
     async def __anext__(self):
-        return self.__next__()
+        value = await self.async_read()
+        await asyncio.sleep(0)  # TODO: loop task switch
 
-    def length(self):
-        return len(self)
+        if value is None:
+            self.eof = True
+            raise StopAsyncIteration
+
+        return value
 
     def tell(self):
         return self._index
@@ -69,15 +68,15 @@ class OperationsReader(Sized):
     def seek(self, index):
         assert index >= 0, f'Invalid index value: {index}'
 
-        if index <= self.length():
+        if index <= len(self):
             self._index = index
             if self.eof:
                 self.eof = False
         else:
             self.eof = True
-            self._index = self.length()
+            self._index = len(self)
 
-    def read(self, length=None):
+    def read(self):
         if self.eof:
             return None
 
@@ -89,10 +88,10 @@ class OperationsReader(Sized):
         else:
             self._index += 1
 
-            if self._index >= self.length():
+            if self._index >= len(self):
                 self.eof = True
 
         return value
 
-    async def async_read(self, length=None):
-        return self.read(length)
+    async def async_read(self):
+        return self.read()

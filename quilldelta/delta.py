@@ -1,15 +1,56 @@
 import json
 from collections.abc import Sequence, Set, Sized
 from functools import reduce
-from itertools import zip_longest
 from math import inf
 from typing import Union, List, Iterable, TypeVar, Dict
 
 from .iterator import Iterator
 from .operations import Insert, Retain, Delete
-from .utils import clean_operation, truncate_repr, chainable, is_insert, is_delete, is_retain, it_insert_text
+from .reader import SequenceReader
+from .utils import (
+    clean_operation,
+    truncate_repr,
+    chainable,
+    is_insert,
+    is_delete,
+    is_retain,
+    it_insert_text)
 
 OperationType = Union[Insert, Retain, Delete, Dict]
+
+
+class OperationsReader(SequenceReader):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._offset = 0
+
+    def length(self):
+        return self._data[self._index].length - self._offset
+
+    def writable(self):
+        return True
+
+    def write(self, value):
+        pass
+
+    def read(self, length=None):
+
+        op = super().read()  # type: Union[Insert, Retain, Delete]
+
+        if not op:
+            return None
+
+        if op.length is None:
+            self._offset = 0
+        else:
+            self._offset = length
+
+        if is_delete(op):
+            return Delete(op.length)
+        elif is_retain(op):
+            return Retain(length, op.attributes)
+        elif is_insert(op):
+            return Insert(op.value[self._offset:length], op.attributes)
 
 
 class Operations(Sequence):
@@ -157,9 +198,9 @@ class Delta(Sized, Iterable):
 
         if isinstance(value, str):
             if len(value) > 0:
-                self.append(Insert(value, attributes))
+                self.push(Insert(value, attributes))
         else:
-            self.append(Insert(value, attributes))
+            self.push(Insert(value, attributes))
 
         return self
 
@@ -168,13 +209,13 @@ class Delta(Sized, Iterable):
             attributes = None
 
         if length > 0:
-            self.append(Retain(length, attributes))
+            self.push(Retain(length, attributes))
 
         return self
 
     def delete(self, length: int):
         if length > 0:
-            self.append(Delete(length))
+            self.push(Delete(length))
 
         return self
 
@@ -199,7 +240,7 @@ class Delta(Sized, Iterable):
         delta = Delta(self.ops)
 
         for op in other.ops:
-            delta.append(op)
+            delta.push(op)
 
         return delta
 
@@ -214,7 +255,7 @@ class Delta(Sized, Iterable):
 
         return self.reduce(reducer, 0)
 
-    def append(self, value: OperationType):
+    def push(self, value: OperationType):
         new_op = clean_operation(value)
         index = len(self.ops)
         last_op = self.ops.last
@@ -252,34 +293,30 @@ class Delta(Sized, Iterable):
         return self
 
     def compose(self, other: TypeVar('Delta')):
-        self_iter = Iterator(self.ops)
-        other_iter = Iterator(other.ops)
-
         delta = Delta()
 
-        while self_iter.has_next() and other_iter.has_next():
-            if other_iter.peek_type() == Insert:
-                delta.append(other_iter.next())
-            elif self_iter.peek_type() == Delete:
-                delta.append(other_iter.next())
-            else:
-                length = min(self_iter.peek_length(), other_iter.peek_length())
+        with OperationsReader(self.ops) as this_reader, \
+                OperationsReader(other.ops) as other_reader:
 
-                self_op = self_iter.next(length)
-                other_op = other_iter.next(length)
+            while not (this_reader.eof and other_reader.eof):
+                this = this_reader.read()
+                other = other_reader.read()
 
-                print()
-                print('min length', self_op, other_op)
+                if is_insert(other):
+                    delta.push(other)
+                elif is_delete(this):
+                    delta.push(this)
+                else:
+                    if is_retain(other):
+                        attrs = {**this.attributes, **other.attributes}
 
-                if is_retain(other_op):
-                    if is_retain(self_op):
-                        new_op = Retain(length, None)
-                    else:
-                        new_op = Insert(self_op.value, None)
+                        if is_retain(this):
+                            delta.push(Retain(self.length(), attrs))
+                        else:
+                            delta.push(Insert(this.value, attrs))
 
-                    delta.append(new_op)
-                elif is_delete(other_op) and is_retain(self_op):
-                    delta.append(other_op)
+                    elif is_delete(other) and is_retain(this):
+                        return delta.push(other)
 
         delta.chop()
 
@@ -325,9 +362,9 @@ class Delta(Sized, Iterable):
                 index = -1
 
             if index < 0:
-                line.append(cursor.next())
+                line.push(cursor.next())
             elif index > 0:
-                line.append(cursor.next(index))
+                line.push(cursor.next(index))
             else:
                 if not func(line, cursor.next(1).attributes, i):
                     return
