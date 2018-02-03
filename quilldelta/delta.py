@@ -1,10 +1,8 @@
 import json
 from collections.abc import Sequence, Set, Sized
 from functools import reduce
-from math import inf
 from typing import Dict, Iterable, List, TypeVar, Union
 
-from .iterator import Iterator
 from .operations import Delete, Insert, Retain
 from .reader import SequenceReader
 from .utils import (chainable, clean_operation, is_delete, is_insert, is_retain, it_insert_text, op_from_dict,
@@ -339,36 +337,25 @@ class Delta(Sized, Iterable):
 
         return delta
 
-    def slice(self, start=0, end=inf):
-        ops = []
-        cursor = Iterator(ops)
-        index = 0
-
-        while index < inf and cursor.has_next():
-            if index < start:
-                next_op = cursor.next(start - index)
-            else:
-                next_op = cursor.next(end - index)
-                ops.append(next_op)
-
-            index += next_op.length
-
-        return Delta(ops)
+    def slice(self, start=0, end=None):
+        reader = OperationsReader(self.ops)
+        return Delta([op for op in reader][start:end])
 
     def diff(self, other, index):
         raise NotImplementedError
 
     def each_line(self, func, newline='\n'):
-        cursor = Iterator(self.ops)
+
+        reader = OperationsReader(self.ops)
         line = Delta()
         i = 0
 
-        while cursor.has_next():
-            if cursor.peek_type() != Insert:
+        while reader.not_eof:
+            if not is_insert(reader.peek()):
                 return
 
-            self_op = cursor.peek()
-            start = self_op.length - cursor.peek_length()
+            self_op = reader.read()
+            start = self_op.length - reader.length()
 
             if it_insert_text(self_op):
                 try:
@@ -379,12 +366,13 @@ class Delta(Sized, Iterable):
                 index = -1
 
             if index < 0:
-                line.push(cursor.next())
+                line.push(reader.read())
             elif index > 0:
-                line.push(cursor.next(index))
+                line.push(reader.read(index))
             else:
-                if not func(line, cursor.next(1).attributes, i):
+                if not func(line, reader.read(1).attributes, i):
                     return
+
                 i += 1
                 line = Delta()
 
