@@ -259,6 +259,7 @@ class Delta(Sized, Iterable):
         return self.reduce(reducer, 0)
 
     def push(self, value: OperationType):
+
         # assert isinstance(value, OperationType)
         new_op = clean_operation(value)
         index = len(self.ops)
@@ -304,20 +305,21 @@ class Delta(Sized, Iterable):
 
         with OperationsReader(self.ops) as this_reader, \
                 OperationsReader(other.ops) as other_reader:
-
             while this_reader.not_eof or other_reader.not_eof:
+                this_peek = this_reader.peek()
                 other_peek = other_reader.peek()
 
                 if is_insert(other_peek):
                     delta.push(other_reader.read())
-                elif is_delete(other_peek):
-                    delta.push(other_reader.read())
+                elif is_delete(this_peek):
+                    delta.push(this_reader.read())
                 else:
                     length = min(this_reader.length(), other_reader.length())
                     length = length if length > 0 else None
 
                     a = this_reader.read(length)
                     b = other_reader.read(length)
+
                     if is_retain(b):
                         op = {'attributes': {
                             **(a.attributes or {}),
@@ -325,10 +327,9 @@ class Delta(Sized, Iterable):
                         }}
 
                         if is_retain(a):
-                            op['retain'] = length
+                            op['retain'] = length or self.length()
                         else:
                             op['insert'] = a.value
-
                         delta.push(op_from_dict(op))
 
                     elif is_delete(b) and is_retain(a):

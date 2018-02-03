@@ -37,7 +37,6 @@ class TestConstructor:
 
     def test_empty(self):
         delta = Delta()
-
         assert len(delta.ops) == 0
 
     def test_empty_ops(self):

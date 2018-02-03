@@ -1,4 +1,4 @@
-from functools import partial, wraps
+from functools import wraps
 from typing import Dict, Union
 
 from .operations import Delete, Insert, Retain
@@ -21,9 +21,12 @@ def clean_operation(value: CleanValueType):
 
 
 def truncate_repr(items: list, length=10):
-    items = items[:length]
-    items = str(items).strip('[]')
-    return f'[{items}{", ..." if len(items) < 10 else ""}]'
+    if len(items) > 0:
+        items = items[:length]
+        items = str(items).strip('[]')
+        return f'[{items}{", ..." if len(items) < 10 else ""}]'
+    else:
+        return '[]'
 
 
 def op_from_dict(data: dict):
