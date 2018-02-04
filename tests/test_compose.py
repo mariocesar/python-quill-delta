@@ -17,7 +17,6 @@ class TestCompose:
         assert delta == expected, [delta.ops, expected.ops]
 
     def test_insert_delete(self):
-        print()
         a = Delta().insert('A')
         b = Delta().delete(1)
         expected = Delta()
@@ -29,9 +28,6 @@ class TestCompose:
         b = Delta().insert('B')
         expected = Delta().insert('B').delete(1)
         delta = a.compose(b)
-        print()
-        print(expected)
-        print(delta)
         assert delta == expected, [delta.ops, expected.ops]
 
     def test_delete_retain(self):
@@ -39,9 +35,6 @@ class TestCompose:
         b = Delta().retain(1, {'bold': True})
         expected = Delta().delete(1).retain(1, {'bold': True})
         delta = a.compose(b)
-        print()
-        print('expected=', expected)
-        print('delta=', delta)
         assert delta == expected, [delta.ops, expected.ops]
 
     def test_delete_delete(self):
@@ -82,4 +75,4 @@ class TestCompose:
         expected = Delta().insert('HelXlo')
         compose = a.compose(b)
 
-        assert compose.ops == expected.ops, compose.ops
+        assert compose.ops == expected.ops, f'{expected} not {compose}'

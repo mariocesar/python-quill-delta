@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-import sys
 import logging
 import pathlib
 import subprocess
+import sys
 import time
 
 from watchdog.events import PatternMatchingEventHandler
@@ -31,11 +31,11 @@ class EventHandler(PatternMatchingEventHandler):
     def on_modified(self, event):
         self.process(event)
 
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s - %(message)s',
                         datefmt='%Y-%m-%d %H:%M:%S')
-
 
     event_handler = EventHandler(
         patterns=['*.py'],

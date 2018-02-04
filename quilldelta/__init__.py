@@ -1,1 +1,1 @@
-from .delta import Delta, Insert, Retain, Delete
+from .delta import Delete, Delta, Insert, Retain

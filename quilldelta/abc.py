@@ -1,8 +1,9 @@
 import asyncio
+from abc import ABC, abstractmethod
 from collections import Sized
 
 
-class SequenceReader(Sized):
+class SequenceReader(Sized, ABC):
     __slots__ = ('_data', '_index', 'eof')
 
     def __init__(self, data=None):
@@ -106,3 +107,7 @@ class SequenceReader(Sized):
 
     async def async_read(self):
         return self.read()
+
+    @abstractmethod
+    def readitem(self):
+        pass

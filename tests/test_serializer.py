@@ -3,25 +3,31 @@ import unittest
 import pytest
 
 from quilldelta import Delete, Delta, Insert, Retain
-from quilldelta.utils import op_from_dict
+from quilldelta.utils import instance_as_dict
 
 
 class TestParser:
     def test_insert_from_dict(self):
-        assert op_from_dict({'insert': 1}) == Insert(1, None)
-        assert op_from_dict({'insert': 'foo'}) == Insert('foo', None)
-        assert op_from_dict({'insert': 'foo', 'attributes': {'bold': True}}) == Insert('foo', {'bold': True})
+        assert instance_as_dict({'insert': 1}) == Insert(1, None)
+        assert instance_as_dict({'insert': 'foo'}) == Insert('foo', None)
+        assert instance_as_dict({
+            'insert': 'foo',
+            'attributes': {'bold': True}
+        }) == Insert('foo', {'bold': True})
 
     def test_retain_from_dict(self):
-        assert op_from_dict({'retain': 1}) == Retain(1, None)
-        assert op_from_dict({'retain': 1, 'attributes': {'bold': True}}) == Insert(1, {'bold': True})
+        assert instance_as_dict({'retain': 1}) == Retain(1, None)
+        assert instance_as_dict({
+            'retain': 1,
+            'attributes': {'bold': True}
+        }) == Insert(1, {'bold': True})
 
     def test_delete_from_dict(self):
-        assert op_from_dict({'delete': 1}) == Delete(1)
+        assert instance_as_dict({'delete': 1}) == Delete(1)
 
     def test_unknown_operation(self):
         with pytest.raises(ValueError) as error:
-            assert op_from_dict({'emotion': 1})
+            assert instance_as_dict({'emotion': 1})
 
         assert error.match('Unknown operation')
 
@@ -75,12 +81,14 @@ class TestAsStringJson(unittest.TestCase):
     def test_insert_str_json(self):
         assert str(Insert('foo', None)) == '{"insert": "foo"}'
         assert str(Insert('foo', {})) == '{"insert": "foo"}'
-        assert str(Insert('foo', {'bold': True})) == '{"insert": "foo", "attributes": {"bold": true}}'
+        assert str(Insert('foo', {
+            'bold': True})) == '{"insert": "foo", "attributes": {"bold": true}}'
 
     def test_retain_str_json(self):
         assert str(Retain('foo', None)) == '{"retain": "foo"}'
         assert str(Retain('foo', {})) == '{"retain": "foo"}'
-        assert str(Retain('foo', {'bold': True})) == '{"retain": "foo", "attributes": {"bold": true}}'
+        assert str(Retain('foo', {
+            'bold': True})) == '{"retain": "foo", "attributes": {"bold": true}}'
 
     def test_delete_str_json(self):
         assert str(Delete(1)) == '{"delete": 1}'

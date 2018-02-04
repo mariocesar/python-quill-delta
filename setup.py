@@ -1,14 +1,12 @@
 import sys
 
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 if sys.version_info < (3, 6):
     sys.exit('Python 3.6 is the minimum required version')
 
 description, long_description = (
-    open('README.rst', 'rt')
-        .read()
-        .split('\n\n', 1))
+    open('README.rst', 'rt').read().split('\n\n', 1))
 
 setup(
     name='quilldelta',

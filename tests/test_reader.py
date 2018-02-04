@@ -2,7 +2,7 @@ from itertools import chain
 
 import pytest
 
-from quilldelta.reader import SequenceReader
+from quilldelta.abc import SequenceReader
 
 
 def test_empty_reader_constructor():

@@ -1,23 +1,7 @@
+import copy
+import json
 from functools import wraps
-from typing import Dict, Union
-
-from .operations import Delete, Insert, Retain
-
-is_insert = lambda op: isinstance(op, Insert)
-is_retain = lambda op: isinstance(op, Retain)
-is_delete = lambda op: isinstance(op, Delete)
-it_insert_text = lambda op: is_insert(op) and isinstance(op.value, str)
-
-CleanValueType = Union[Insert, Retain, Delete, Dict]
-
-
-def clean_operation(value: CleanValueType):
-    assert isinstance(value, (Insert, Retain, Delete, dict)), \
-        f'Wrong type {type(value)} expected {CleanValueType}'
-
-    if isinstance(value, dict):
-        value = op_from_dict(value)
-    return value
+from typing import Any, Dict, List
 
 
 def truncate_repr(items: list, length=10):
@@ -27,17 +11,6 @@ def truncate_repr(items: list, length=10):
         return f'[{items}{", ..." if len(items) < 10 else ""}]'
     else:
         return '[]'
-
-
-def op_from_dict(data: dict):
-    if 'insert' in data:
-        return Insert.fromdict(data)
-    elif 'retain' in data:
-        return Retain.fromdict(data)
-    elif 'delete' in data:
-        return Delete.fromdict(data)
-
-    raise ValueError('Unknown operation for %s' % data)
 
 
 def chainable(func):
@@ -59,3 +32,38 @@ def chainable(func):
 
     wrapper.inner = func
     return wrapper
+
+
+def dict_to_class(cls, attrs: Dict):
+    name = cls.__name__.lower()
+
+    if name in attrs:
+        value = attrs.pop(name)
+        return cls(value, **attrs)
+
+
+def instance_as_dict(instance: Any):
+    name = type(instance).__name__.lower()
+    data = instance._asdict()
+    value = data.pop('value')
+    return {name: value, **{k: v for k, v in data.items() if v}}
+
+
+def instance_as_json(instance: Any):
+    if hasattr(instance, 'as_data'):
+        return json.dumps(instance.as_data())
+    elif hasattr(instance, '_asdict'):
+        return json.dumps(instance._asdict())
+
+    raise ValueError("Instance can't be output as JSON")
+
+
+def merge_dicts(*args: List):
+    result = {}
+
+    for source in args:
+        if source is not None:
+            source = copy.deepcopy(source)  # type: dict
+            result.update(source)
+
+    return result

@@ -1,102 +1,125 @@
-import json
-from collections import namedtuple
+from collections.abc import Sequence, Set
+from typing import Iterable, List, TypeVar, Union
 
-__all__ = ['Insert', 'Retain', 'Delete']
-
-
-def _as_json(instance):
-    return json.dumps(instance.as_data())
-
-
-def _sum_operation(instance, other):
-    type_op = type(instance)
-    type_other = type(other)
-
-    if type(other) != type_op:
-        raise ValueError(f'Operations are not the same type '
-                         f'{type_op.__name__} != {type_other}')
-
-    if hasattr(instance, 'attributes'):
-        instance_attr = instance.attributes if instance.attributes else None
-        other_attr = other.attributes if other.attributes else None
-
-        if instance_attr != other_attr:
-            raise ValueError("Can't sum operations with different attributes")
-
-        return type_op(instance.value + other.value, other_attr)
-    else:
-        return type_op(instance.value + other.value)
+from .abc import SequenceReader
+from .types import (Delete, Insert, OperationType, Retain, load_operation,
+                    is_delete, it_insert_text, is_insert, is_retain)
+from .utils import (chainable, truncate_repr)
 
 
-def _as_data(instance):
-    name = type(instance).__name__.lower()
-    data = instance._asdict()
-    value = data.pop('value')
-    return {name: value, **{k: v for k, v in data.items() if v}}
+class OperationsReader(SequenceReader):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._offset = 0
 
-
-def _fromdict(cls, data: dict):
-    name = cls.__name__.lower()
-
-    if name in data:
-        value = data.pop(name)
-        return cls(value, **data)
-
-
-class Insert(namedtuple('Insert', 'value, attributes')):
-    __slots__ = ()
-    __str__ = _as_json
-    __add__ = _sum_operation
-
-    as_data = _as_data
-    as_json = _as_json
-
-    @classmethod
-    def fromdict(cls, data):
-        data.setdefault('attributes', None)
-        return _fromdict(cls, data)
-
-    @property
     def length(self):
-        if isinstance(self.value, str):
-            return len(self.value)
-        return 1
+        if self.eof:
+            return None
+
+        return self.peek().length - self._offset
+
+    def writable(self):
+        return True
+
+    def write(self, value):
+        pass
+
+    def readitem(self, length=None):
+        peek = self.peek()
+
+        if peek is None:
+            return Retain(-1, None)
+
+        op = self.read()  # type: Union[Insert, Retain, Delete]
+
+        if length is None:
+            self._offset = 0
+        else:
+            self._index -= 1
+            self._offset += length
+
+        if is_delete(op):
+            return Delete(op.length)
+        else:
+            if is_retain(op):
+                return Retain(length, op.attributes)
+            if it_insert_text(op):
+                return Insert(op.value[:self._offset], op.attributes)
+            elif is_insert(op):
+                return Insert(op.value, op.attributes)
 
 
-class Retain(namedtuple('Retain', 'value, attributes')):
-    __slots__ = ()
-    __str__ = _as_json
-    __add__ = _sum_operation
+class OperationsList(Sequence):
+    def __init__(self, items: Union[List, Iterable] = None):
+        if items:
+            assert isinstance(items, (
+            List, Iterable)), f'Wrong type {type(items)} for items'
 
-    as_data = _as_data
-    as_json = _as_json
+        self._items = []
+        self.last = None
 
-    @classmethod
-    def fromdict(cls, data: dict):
-        data.setdefault('attributes', None)
-        return _fromdict(cls, data)
+        if not items:
+            items = []
 
-    @property
-    def length(self):
-        return self.value
+        for item in items:
+            self.append.inner(self, item)
 
+    def __hash__(self):
+        return Set._hash(self)
 
-class Delete(namedtuple('Delete', 'value')):
-    __slots__ = ()
-    __str__ = _as_json
-    __add__ = _sum_operation
+    def __repr__(self):
+        return f'<Operations {truncate_repr(self._items)} at {id(self)}>'
 
-    as_data = _as_data
-    as_json = _as_json
+    def __len__(self):
+        return len(self._items)
 
-    @classmethod
-    def fromdict(cls, data: dict):
-        return _fromdict(cls, data)
+    def __getitem__(self, item):
+        return self._items[item]
 
-    @property
-    def length(self):
-        return self.value
+    def __setitem__(self, key: int, value: OperationType):
+        value = load_operation(value)
+        self._items[key] = value
+        self.last = self._items[-1]
 
-    @length.setter
-    def length(self, val):
-        self.value = int(val)
+    def __eq__(self, other: Union[TypeVar('OperationsList'), List]):
+        assert isinstance(other,
+                          (OperationsList, list)), f'Wrong type {type(other)}'
+
+        if isinstance(other, OperationsList):
+            return self._items == other._items
+        elif isinstance(other, list):
+            return self._items == other
+
+    def __add__(self, other: Union[TypeVar('OperationsList'), List]):
+        assert isinstance(other,
+                          (OperationsList, list)), f'Wrong type {type(other)}'
+
+        if isinstance(other, OperationsList):
+            return OperationsList(self._items + other._items)
+        elif isinstance(other, list):
+            return OperationsList(self._items + other)
+
+    @chainable
+    def append(self, value: OperationType):
+        value = load_operation(value)
+        self._items.append(value)
+        self.last = value
+
+    @chainable
+    def insert(self, index: int, value: OperationType):
+        value = load_operation(value)
+        self._items.insert(index, value)
+        self.last = self._items[-1]
+
+    @chainable
+    def filter(self, func):
+        return OperationsList(filter(func, self))
+
+    @chainable
+    def map(self, func):
+        return OperationsList(map(func, self))
+
+    @chainable
+    def chop(self):
+        if self.last and is_retain(self.last) and not self.last.attributes:
+            self._items.pop()

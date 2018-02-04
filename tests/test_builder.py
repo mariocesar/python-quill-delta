@@ -1,11 +1,11 @@
 import pytest
 
-from quilldelta.delta import Delta, Operations
-from quilldelta.operations import Delete, Insert, Retain
+from quilldelta.delta import Delta, OperationsList
+from quilldelta.types import Delete, Insert, Retain
 
 
 def test_hash_delta():
-    operation = Operations()
+    operation = OperationsList()
     delta = Delta()
 
     assert hash(delta) == hash(operation)
