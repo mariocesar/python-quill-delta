@@ -1,7 +1,7 @@
 import copy
 import json
 from functools import wraps
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 
 def truncate_repr(items: list, length=10):
@@ -39,7 +39,12 @@ def dict_to_class(cls, attrs: Dict):
 
     if name in attrs:
         value = attrs.pop(name)
-        return cls(value, **attrs)
+        attrs = merge_dicts(attrs, attrs.pop('attributes', None))
+
+        if hasattr(cls, 'attributes'):
+            return cls(value, attributes=attrs or None)
+        else:
+            return cls(value)
 
 
 def instance_as_dict(instance: Any):
@@ -58,7 +63,7 @@ def instance_as_json(instance: Any):
     raise ValueError("Instance can't be output as JSON")
 
 
-def merge_dicts(*args: List):
+def merge_dicts(*args):
     result = {}
 
     for source in args:

@@ -200,7 +200,8 @@ class Delta(Sized, Iterable):
                 b = other_reader.readitem(length)
 
                 if is_retain(b):
-                    op = _.merge_dicts(a.attributes, b.attributes)
+                    op = _.merge_dicts(a.attributes if a else None,
+                                       b.attributes if b else None)
 
                     if is_retain(a):
                         op['retain'] = length or self.length()

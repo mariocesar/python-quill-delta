@@ -3,31 +3,31 @@ import unittest
 import pytest
 
 from quilldelta import Delete, Delta, Insert, Retain
-from quilldelta.utils import instance_as_dict
+from quilldelta.types import load_operation
 
 
 class TestParser:
     def test_insert_from_dict(self):
-        assert instance_as_dict({'insert': 1}) == Insert(1, None)
-        assert instance_as_dict({'insert': 'foo'}) == Insert('foo', None)
-        assert instance_as_dict({
+        assert load_operation({'insert': 1}) == Insert(1, None)
+        assert load_operation({'insert': 'foo'}) == Insert('foo', None)
+        assert load_operation({
             'insert': 'foo',
             'attributes': {'bold': True}
         }) == Insert('foo', {'bold': True})
 
     def test_retain_from_dict(self):
-        assert instance_as_dict({'retain': 1}) == Retain(1, None)
-        assert instance_as_dict({
+        assert load_operation({'retain': 1}) == Retain(1, None)
+        assert load_operation({
             'retain': 1,
             'attributes': {'bold': True}
         }) == Insert(1, {'bold': True})
 
     def test_delete_from_dict(self):
-        assert instance_as_dict({'delete': 1}) == Delete(1)
+        assert load_operation({'delete': 1}) == Delete(1)
 
     def test_unknown_operation(self):
         with pytest.raises(ValueError) as error:
-            assert instance_as_dict({'emotion': 1})
+            assert load_operation({'emotion': 1})
 
         assert error.match('Unknown operation')
 
