@@ -2,8 +2,8 @@ from collections.abc import Sequence, Set
 from typing import Iterable, List, TypeVar, Union
 
 from .abc import SequenceReader
-from .types import (Delete, Insert, OperationType, Retain, load_operation,
-                    is_delete, it_insert_text, is_insert, is_retain)
+from .types import (Delete, Insert, OperationType, Retain, is_delete, is_insert,
+                    is_retain, it_insert_text, load_operation)
 from .utils import (chainable, truncate_repr)
 
 
@@ -35,7 +35,7 @@ class OperationsReader(SequenceReader):
         if length is None:
             self._offset = 0
         else:
-            self._index -= 1
+            self.seek(self._index - 1)
             self._offset += length
 
         if is_delete(op):
@@ -53,7 +53,7 @@ class OperationsList(Sequence):
     def __init__(self, items: Union[List, Iterable] = None):
         if items:
             assert isinstance(items, (
-            List, Iterable)), f'Wrong type {type(items)} for items'
+                List, Iterable)), f'Wrong type {type(items)} for items'
 
         self._items = []
         self.last = None

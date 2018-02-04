@@ -13,9 +13,10 @@ class SequenceReader(Sized, ABC):
         self.eof = False
         self._index = 0
         self._data = data
+        self._length = len(data)
 
     def __len__(self):
-        return len(self._data)
+        return self._length
 
     def __enter__(self):
         return self
@@ -94,14 +95,14 @@ class SequenceReader(Sized, ABC):
 
         value = self.peek()
 
-        if not value:
-            self.eof = True
-            value = None
-        else:
+        if value:
             self._index += 1
 
             if self._index >= len(self):
                 self.eof = True
+        else:
+            self.eof = True
+            value = None
 
         return value
 
