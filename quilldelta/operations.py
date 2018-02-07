@@ -24,7 +24,7 @@ class OperationsReader(SequenceReader):
     def write(self, value):
         pass
 
-    def readitem(self, length=None):
+    def readitem(self, length: int = None):
         peek = self.peek()
 
         if peek is None:
@@ -42,9 +42,9 @@ class OperationsReader(SequenceReader):
             return Delete(op.length)
         else:
             if is_retain(op):
-                return Retain(length, op.attributes)
+                return Retain(length or -1, op.attributes)
             if it_insert_text(op):
-                return Insert(op.value[:self._offset], op.attributes)
+                return Insert(op.value[self._offset:], op.attributes)
             elif is_insert(op):
                 return Insert(op.value, op.attributes)
 
