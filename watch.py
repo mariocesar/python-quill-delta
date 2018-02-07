@@ -5,8 +5,13 @@ import subprocess
 import sys
 import time
 
-from watchdog.events import PatternMatchingEventHandler
-from watchdog.observers import Observer
+try:
+    from watchdog.events import PatternMatchingEventHandler
+    from watchdog.observers import Observer
+except ImportError:
+    sys.stderr.write('Missing watchdog requirement\n')
+    sys.stderr.write('  pip install watchdog\n')
+    sys.exit(1)
 
 root = pathlib.Path(__file__).parent.resolve()
 
